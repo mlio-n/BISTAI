@@ -2,42 +2,56 @@ package com.muzaffer.bistai.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// BISTAI Renk Paleti
+// ─── BISTAI Profesyonel Finans Renk Paleti ───────────────────────────────────
 
-// Lacivert Tonları (Primary)
-val NavyBlue = Color(0xFF0A192F)
-val NavyBlueLight = Color(0xFF172A45)
-val NavyBlueDark = Color(0xFF020C1B)
+// Derin Lacivert – Ana Marka Rengi (Primary)
+val NavyBlue         = Color(0xFF0A192F)
+val NavyBlueMedium   = Color(0xFF112240)
+val NavyBlueLight    = Color(0xFF1D3461)
+val NavyBlueSurface  = Color(0xFF172A45)
 
-// Borsa Yeşili (Secondary/Success)
-val BourseGreen = Color(0xFF00C853)
-val BourseGreenLight = Color(0xFF5EFB82)
-val BourseGreenDark = Color(0xFF009624)
+// Borsa Yeşili – Yükseliş / Başarı (Bullish)
+val BullishGreen      = Color(0xFF00C853)
+val BullishGreenLight = Color(0xFF69F0AE)
+val BullishGreenDark  = Color(0xFF00882E)
 
-// Borsa Kırmızısı (Error)
-val BourseRed = Color(0xFFFF5252)
+// Canlı Kırmızı – Düşüş / Hata (Bearish)
+val BearishRed        = Color(0xFFFF3D57)
+val BearishRedLight   = Color(0xFFFF8097)
+val BearishRedDark    = Color(0xFFC0002A)
 
-// Diğer Renkler
-val SlateBlue = Color(0xFF8892B0)
-val LightGray = Color(0xFFCCD6F6)
-val White = Color(0xFFFFFFFF)
+// Nötr Tonlar
+val SlateBlue         = Color(0xFF8892B0)
+val LightSlate        = Color(0xFFCCD6F6)
+val LightestSlate     = Color(0xFFE6F1FF)
+val White             = Color(0xFFFFFFFF)
+val PureBlack         = Color(0xFF020C1B)
 
-// Material 3 Dark Palette
-val PrimaryDark = NavyBlueLight
-val OnPrimaryDark = White
-val SecondaryDark = BourseGreen
-val OnSecondaryDark = NavyBlueDark
-val BackgroundDark = NavyBlueDark
-val OnBackgroundDark = LightGray
-val SurfaceDark = NavyBlueLight
-val OnSurfaceDark = LightGray
+// Vurgu – Altın (Gold Accent)
+val GoldAccent        = Color(0xFFFFC107)
 
-// Material 3 Light Palette
-val PrimaryLight = NavyBlue
-val OnPrimaryLight = White
-val SecondaryLight = BourseGreenDark
-val OnSecondaryLight = White
-val BackgroundLight = Color(0xFFF8F9FA)
-val OnBackgroundLight = NavyBlue
-val SurfaceLight = White
-val OnSurfaceLight = NavyBlue
+// ─── Dark Color Scheme Tokens ─────────────────────────────────────────────────
+val DarkPrimary         = NavyBlueMedium
+val DarkOnPrimary       = LightestSlate
+val DarkPrimaryContainer = NavyBlueLight
+val DarkSecondary       = BullishGreen
+val DarkOnSecondary     = PureBlack
+val DarkBackground      = PureBlack
+val DarkOnBackground    = LightSlate
+val DarkSurface         = NavyBlueMedium
+val DarkOnSurface       = LightSlate
+val DarkSurfaceVariant  = NavyBlueSurface
+val DarkOutline         = SlateBlue
+
+// ─── Light Color Scheme Tokens ────────────────────────────────────────────────
+val LightPrimary         = NavyBlue
+val LightOnPrimary       = White
+val LightPrimaryContainer = LightestSlate
+val LightSecondary       = BullishGreenDark
+val LightOnSecondary     = White
+val LightBackground      = Color(0xFFF0F4F8)
+val LightOnBackground    = NavyBlue
+val LightSurface         = White
+val LightOnSurface       = NavyBlue
+val LightSurfaceVariant  = LightestSlate
+val LightOutline         = SlateBlue
