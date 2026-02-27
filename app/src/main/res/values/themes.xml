@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.BISTAI" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Ana tema — tam ekran, eylem çubuğu yok -->
+    <style name="Theme.BISTAI" parent="Theme.SplashScreen">
+        <!-- Splash arka planı -->
+        <item name="windowSplashScreenBackground">#020C1B</item>
+        <!-- Splash ikonu (adaptif için ayrı drawable kullanılıyor) -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <!-- Splash sonrası geçilecek tema -->
+        <item name="postSplashScreenTheme">@style/Theme.BISTAI.Main</item>
+    </style>
+
+    <!-- Splash bittikten sonra uygulanan asıl tema -->
+    <style name="Theme.BISTAI.Main" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#020C1B</item>
+        <item name="android:statusBarColor">#020C1B</item>
+        <item name="android:navigationBarColor">#020C1B</item>
+    </style>
+
 </resources>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash Screen Logo — Vektör -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Lacivert yuvarlak arka plan -->
+    <path
+        android:fillColor="#0A192F"
+        android:pathData="M0,0 L108,0 L108,108 L0,108 Z"/>
+
+    <!-- Yeşil yükselen trend oku (B harfinin üzerinde) -->
+    <path
+        android:strokeColor="#00C853"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M22,78 L40,58 L54,66 L78,34"/>
+    <!-- Ok ucu -->
+    <path
+        android:fillColor="#00C853"
+        android:pathData="M78,34 L70,36 L76,42 Z"/>
+
+    <!-- B Harfi (kalın, beyaz) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,40 L34,68
+                          L34,40 Q34,40 48,40 Q58,40 58,49 Q58,54 52,56
+                          Q60,58 60,65 Q60,76 48,76 L34,76 Z
+                          M40,46 L40,54 L48,54 Q52,54 52,50 Q52,46 48,46 Z
+                          M40,60 L40,70 L48,70 Q54,70 54,65 Q54,60 48,60 Z"/>
+
+    <!-- Altın alt çizgi -->
+    <path
+        android:strokeColor="#FFC107"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M28,82 L80,82"/>
+
+</vector>
