@@ -1,44 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Splash Screen Logo — Vektör -->
+<!--
+  Splash Screen İkonu — BISTAI V1.1
+  Tasarım: Fintech minimal — yeşil trend çizgisi + "BISTAI" lettering + altın aksan
+  Boyut: 108×108dp (Android Splash Screen API standardı)
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Lacivert yuvarlak arka plan -->
+    <!-- Arka Plan: Derin Lacivert -->
     <path
-        android:fillColor="#0A192F"
-        android:pathData="M0,0 L108,0 L108,108 L0,108 Z"/>
+        android:fillColor="#020C1B"
+        android:pathData="M0,0 H108 V108 H0 Z"/>
 
-    <!-- Yeşil yükselen trend oku (B harfinin üzerinde) -->
+    <!-- Üst yeşil trend çizgisi (yükselen) -->
     <path
         android:strokeColor="#00C853"
-        android:strokeWidth="3"
+        android:strokeWidth="2.5"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:fillColor="#00000000"
-        android:pathData="M22,78 L40,58 L54,66 L78,34"/>
+        android:pathData="M18,62 L32,48 L44,55 L62,36 L76,42 L90,26"/>
     <!-- Ok ucu -->
     <path
         android:fillColor="#00C853"
-        android:pathData="M78,34 L70,36 L76,42 Z"/>
+        android:pathData="M90,26 L83,29 L87,35 Z"/>
 
-    <!-- B Harfi (kalın, beyaz) -->
+    <!-- "B" harfi -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M34,40 L34,68
-                          L34,40 Q34,40 48,40 Q58,40 58,49 Q58,54 52,56
-                          Q60,58 60,65 Q60,76 48,76 L34,76 Z
-                          M40,46 L40,54 L48,54 Q52,54 52,50 Q52,46 48,46 Z
-                          M40,60 L40,70 L48,70 Q54,70 54,65 Q54,60 48,60 Z"/>
+        android:pathData="M26,70 L26,84
+                          M26,70 Q26,70 35,70 Q42,70 42,75 Q42,79 37,80
+                          Q44,81 44,87 Q44,92 35,92 L26,92
+                          M30,74 L30,80 L35,80 Q38,80 38,77 Q38,74 35,74 Z
+                          M30,84 L30,88 L35,88 Q40,88 40,86 Q40,84 35,84 Z"/>
 
-    <!-- Altın alt çizgi -->
+    <!-- "I" harfi -->
     <path
-        android:strokeColor="#FFC107"
-        android:strokeWidth="3"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
         android:strokeLineCap="round"
         android:fillColor="#00000000"
-        android:pathData="M28,82 L80,82"/>
+        android:pathData="M49,70 L49,92"/>
+
+    <!-- "S" harfi -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M62,73 Q58,70 54,72 Q50,75 54,79 Q58,81 62,84 Q66,87 62,91 Q58,93 54,91"/>
+
+    <!-- "T" harfi -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M64,70 L76,70 M70,70 L70,92"/>
+
+    <!-- "A" harfi -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M78,92 L83,70 L88,92 M80,84 L86,84"/>
+
+    <!-- "I" harfi (son) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M92,70 L92,92"/>
+
+    <!-- Altın alt aksan çizgisi -->
+    <path
+        android:strokeColor="#FFC107"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M26,95 L92,95"/>
 
 </vector>
