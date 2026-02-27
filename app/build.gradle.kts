@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,10 +8,10 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
-// Gemini API anahtarını local.properties'den güvenle okur (top-level'da çalışır)
-val localProps = java.util.Properties().apply {
+// local.properties'den API anahtarını oku
+val localProps = Properties().also { props ->
     val f = rootProject.file("local.properties")
-    if (f.exists()) load(f.inputStream())
+    if (f.exists()) f.reader().use { props.load(it) }
 }
 val geminiApiKey: String = localProps.getProperty("GEMINI_API_KEY", "")
 
@@ -42,8 +44,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    kotlinOptions {
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
