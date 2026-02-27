@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.muzaffer.bistai.presentation.portfolio.PortfolioScreen
+import com.muzaffer.bistai.presentation.navigation.BistaiNavGraph
 import com.muzaffer.bistai.ui.theme.BISTAITheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -15,7 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BISTAITheme {
-                PortfolioScreen()
+                BistaiNavGraph()
             }
         }
     }

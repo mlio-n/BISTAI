@@ -2,12 +2,16 @@ package com.muzaffer.bistai.presentation.portfolio
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,7 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,9 +33,20 @@ import com.muzaffer.bistai.ui.theme.*
 
 @Composable
 fun PortfolioScreen(
+    onStockClick: (String) -> Unit = {},
     viewModel: PortfolioViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Arama filtresi
+    val filteredStocks = remember(uiState.stocks, searchQuery) {
+        if (searchQuery.isBlank()) uiState.stocks
+        else uiState.stocks.filter {
+            it.symbol.contains(searchQuery, ignoreCase = true) ||
+            it.name.contains(searchQuery, ignoreCase = true)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -41,75 +58,131 @@ fun PortfolioScreen(
             )
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-
-            // ── Top App Bar ───────────────────────────────────────────────
             PortfolioTopBar(onRefreshClick = { viewModel.refresh() })
 
-            // ── Content ───────────────────────────────────────────────────
+            // ── Arama Çubuğu ─────────────────────────────────────────────
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+
+            // ── İçerik ───────────────────────────────────────────────────
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
-                    uiState.isLoading -> LoadingState()                        // Yükleniyor
+                    uiState.isLoading -> LoadingState()
                     uiState.hasError  -> ErrorState(
-                        message   = uiState.errorMessage ?: "Bilinmeyen hata",
-                        onRetry   = { viewModel.refresh() }
-                    )                                                          // Hata
-                    uiState.isEmpty   -> EmptyState()                          // Boş
-                    else              -> StockList(stocks = uiState.stocks)    // Başarılı
+                        message = uiState.errorMessage ?: "Bilinmeyen hata",
+                        onRetry = { viewModel.refresh() }
+                    )
+                    uiState.isEmpty   -> EmptyState()
+                    else              -> StockList(
+                        stocks = filteredStocks,
+                        searchQuery = searchQuery,
+                        onStockClick = onStockClick
+                    )
                 }
             }
         }
     }
 }
 
-// ─── Top App Bar ─────────────────────────────────────────────────────────────
+// ─── Search Bar ──────────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PortfolioTopBar(onRefreshClick: () -> Unit) {
-    Surface(color = Color.Transparent, shadowElevation = 0.dp) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "BISTAI",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = White,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(BullishGreen)
-                    )
-                    Text(
-                        text = "CANLI",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = BullishGreen,
-                        letterSpacing = 1.5.sp
-                    )
+private fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val focusManager = LocalFocusManager.current
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = modifier.fillMaxWidth(),
+        placeholder = {
+            Text(
+                text = "Hisse ara... (THYAO, Garanti...)",
+                color = SlateBlue,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Ara",
+                tint = SlateBlue
+            )
+        },
+        trailingIcon = {
+            if (query.isNotBlank()) {
+                TextButton(onClick = { onQueryChange("") }) {
+                    Text("✕", color = SlateBlue)
                 }
             }
-            IconButton(
-                onClick = onRefreshClick,
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = NavyBlueSurface,
-                    contentColor = LightSlate
-                )
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(16.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor   = BullishGreen,
+            unfocusedBorderColor = NavyBlueSurface,
+            focusedContainerColor   = NavyBlueSurface,
+            unfocusedContainerColor = NavyBlueSurface,
+            cursorColor          = BullishGreen,
+            focusedTextColor     = White,
+            unfocusedTextColor   = White
+        ),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
+    )
+}
+
+// ─── Top App Bar ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun PortfolioTopBar(onRefreshClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = "BISTAI",
+                style = MaterialTheme.typography.headlineMedium,
+                color = White,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Icon(Icons.Default.Refresh, contentDescription = "Yenile")
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(BullishGreen)
+                )
+                Text(
+                    text = "CANLI",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = BullishGreen,
+                    letterSpacing = 1.5.sp
+                )
             }
+        }
+        IconButton(
+            onClick = onRefreshClick,
+            colors = IconButtonDefaults.iconButtonColors(
+                containerColor = NavyBlueSurface,
+                contentColor = LightSlate
+            )
+        ) {
+            Icon(Icons.Default.Refresh, contentDescription = "Yenile")
         }
     }
 }
@@ -117,7 +190,11 @@ private fun PortfolioTopBar(onRefreshClick: () -> Unit) {
 // ─── Stock List ───────────────────────────────────────────────────────────────
 
 @Composable
-private fun StockList(stocks: List<Stock>) {
+private fun StockList(
+    stocks: List<Stock>,
+    searchQuery: String,
+    onStockClick: (String) -> Unit
+) {
     LazyColumn(
         contentPadding = PaddingValues(
             start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp
@@ -125,19 +202,44 @@ private fun StockList(stocks: List<Stock>) {
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {
+            val label = if (searchQuery.isBlank())
+                "Portföy  •  ${stocks.size} Hisse"
+            else
+                "\"$searchQuery\" için ${stocks.size} sonuç"
             Text(
-                text = "Portföy  •  ${stocks.size} Hisse",
+                text = label,
                 style = MaterialTheme.typography.labelMedium,
                 color = SlateBlue,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
             )
         }
-        items(stocks, key = { it.symbol }) { stock ->
-            AnimatedVisibility(
-                visible = true,
-                enter = fadeIn() + slideInVertically()
-            ) {
-                StockCard(stock = stock)
+
+        if (stocks.isEmpty() && searchQuery.isNotBlank()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "\"$searchQuery\" bulunamadı",
+                        color = SlateBlue,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+        } else {
+            items(stocks, key = { it.symbol }) { stock ->
+                AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn() + slideInVertically()
+                ) {
+                    StockCard(
+                        stock = stock,
+                        onClick = { onStockClick(stock.symbol) }
+                    )
+                }
             }
         }
     }
@@ -146,16 +248,18 @@ private fun StockList(stocks: List<Stock>) {
 // ─── Stock Card ───────────────────────────────────────────────────────────────
 
 @Composable
-fun StockCard(stock: Stock) {
+fun StockCard(stock: Stock, onClick: () -> Unit = {}) {
     val changeColor = if (stock.isBullish) BullishGreen else BearishRed
     val changeBg    = if (stock.isBullish) BullishGreen.copy(alpha = 0.12f)
-                     else BearishRed.copy(alpha = 0.12f)
+                      else BearishRed.copy(alpha = 0.12f)
 
     Surface(
         shape  = RoundedCornerShape(18.dp),
         color  = NavyBlueSurface,
         tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
     ) {
         Row(
             modifier = Modifier
@@ -164,7 +268,7 @@ fun StockCard(stock: Stock) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // ── Sol: Sembol & İsim
+            // Sol: Sembol & İsim
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text  = stock.symbol,
@@ -183,7 +287,7 @@ fun StockCard(stock: Stock) {
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // ── Sağ: Fiyat & Değişim
+            // Sağ: Fiyat & Değişim
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text  = "₺%.2f".format(stock.currentPrice),
@@ -210,7 +314,7 @@ fun StockCard(stock: Stock) {
     }
 }
 
-// ─── Loading State ────────────────────────────────────────────────────────────
+// ─── States ───────────────────────────────────────────────────────────────────
 
 @Composable
 private fun LoadingState() {
@@ -219,21 +323,11 @@ private fun LoadingState() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            CircularProgressIndicator(
-                color = BullishGreen,
-                strokeWidth = 3.dp,
-                modifier = Modifier.size(48.dp)
-            )
-            Text(
-                text  = "Piyasalar yükleniyor...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = SlateBlue
-            )
+            CircularProgressIndicator(color = BullishGreen, strokeWidth = 3.dp, modifier = Modifier.size(48.dp))
+            Text("Piyasalar yükleniyor...", style = MaterialTheme.typography.bodyMedium, color = SlateBlue)
         }
     }
 }
-
-// ─── Error State ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun ErrorState(message: String, onRetry: () -> Unit) {
@@ -243,46 +337,21 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.padding(32.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Warning,
-                contentDescription = null,
-                tint = BearishRed,
-                modifier = Modifier.size(52.dp)
-            )
-            Text(
-                text  = "Bağlantı Hatası",
-                style = MaterialTheme.typography.titleLarge,
-                color = White,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text  = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = SlateBlue
-            )
+            Icon(Icons.Default.Warning, contentDescription = null, tint = BearishRed, modifier = Modifier.size(52.dp))
+            Text("Bağlantı Hatası", style = MaterialTheme.typography.titleLarge, color = White, fontWeight = FontWeight.Bold)
+            Text(message, style = MaterialTheme.typography.bodyMedium, color = SlateBlue)
             Button(
                 onClick = onRetry,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = BullishGreen,
-                    contentColor   = PureBlack
-                ),
+                colors = ButtonDefaults.buttonColors(containerColor = BullishGreen, contentColor = PureBlack),
                 shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Tekrar Dene", fontWeight = FontWeight.Bold)
-            }
+            ) { Text("Tekrar Dene", fontWeight = FontWeight.Bold) }
         }
     }
 }
 
-// ─── Empty State ──────────────────────────────────────────────────────────────
-
 @Composable
 private fun EmptyState() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            text  = "Henüz hisse verisi yok",
-            style = MaterialTheme.typography.bodyLarge,
-            color = SlateBlue
-        )
+        Text("Henüz hisse verisi yok", style = MaterialTheme.typography.bodyLarge, color = SlateBlue)
     }
 }
