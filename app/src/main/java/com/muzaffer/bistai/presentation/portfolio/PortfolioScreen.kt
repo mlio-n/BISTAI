@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import com.muzaffer.bistai.presentation.components.ShimmerStockCard
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
@@ -318,13 +319,27 @@ fun StockCard(stock: Stock, onClick: () -> Unit = {}) {
 
 @Composable
 private fun LoadingState() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            CircularProgressIndicator(color = BullishGreen, strokeWidth = 3.dp, modifier = Modifier.size(48.dp))
-            Text("Piyasalar yükleniyor...", style = MaterialTheme.typography.bodyMedium, color = SlateBlue)
+    LazyColumn(
+        contentPadding = PaddingValues(
+            start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        userScrollEnabled = false
+    ) {
+        // Başlık skeleton
+        item {
+            Box(
+                modifier = Modifier
+                    .width(160.dp)
+                    .height(14.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(NavyBlueSurface)
+                    .padding(horizontal = 4.dp, vertical = 4.dp)
+            )
+        }
+        // 7 adet shimmer kart
+        items(7) {
+            ShimmerStockCard()
         }
     }
 }
