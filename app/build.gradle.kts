@@ -6,6 +6,13 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
+// Gemini API anahtarını local.properties'den güvenle okur (top-level'da çalışır)
+val localProps = java.util.Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
+}
+val geminiApiKey: String = localProps.getProperty("GEMINI_API_KEY", "")
+
 android {
     namespace = "com.muzaffer.bistai"
     compileSdk = 35
@@ -19,11 +26,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Gemini API anahtarını local.properties'den güvenle okur
-        val localProps = java.util.Properties()
-        val localPropsFile = rootProject.file("local.properties")
-        if (localPropsFile.exists()) localProps.load(java.io.FileInputStream(localPropsFile))
-        buildConfigField("String", "GEMINI_API_KEY", "\"${localProps.getProperty("GEMINI_API_KEY", "")}\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
     }
 
     buildTypes {
@@ -39,8 +42,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
     buildFeatures {
         compose = true
