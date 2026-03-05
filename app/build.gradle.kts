@@ -14,7 +14,6 @@ val localProps = Properties().also { props ->
     if (f.exists()) f.reader().use { props.load(it) }
 }
 val geminiApiKey: String = localProps.getProperty("GEMINI_API_KEY", "")
-val gnewsApiKey: String  = localProps.getProperty("GNEWS_API_KEY",  "")
 
 android {
     namespace = "com.muzaffer.bistai"
@@ -29,7 +28,6 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
-        buildConfigField("String", "GNEWS_API_KEY",  "\"$gnewsApiKey\"")
     }
 
     buildTypes {

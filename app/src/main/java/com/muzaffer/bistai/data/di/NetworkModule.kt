@@ -1,6 +1,5 @@
 package com.muzaffer.bistai.data.di
 
-import com.muzaffer.bistai.data.remote.GNewsApiService
 import com.muzaffer.bistai.data.remote.StockApiService
 import com.muzaffer.bistai.data.remote.YahooFinanceApiService
 import dagger.Module
@@ -23,9 +22,6 @@ object NetworkModule {
 
     /** Yahoo Finance v7 endpoint'i — BIST + kripto + döviz fiyatları için. */
     private const val YAHOO_FINANCE_BASE_URL = "https://query1.finance.yahoo.com/"
-
-    /** GNews API endpoint'i — Türkçe haber arama için. */
-    private const val GNEWS_BASE_URL         = "https://gnews.io/api/v4/"
 
     // ─── Ortak OkHttpClient ─────────────────────────────────────────────────
 
@@ -90,22 +86,4 @@ object NetworkModule {
     fun provideYahooFinanceApiService(
         @YahooFinanceClient retrofit: Retrofit
     ): YahooFinanceApiService = retrofit.create(YahooFinanceApiService::class.java)
-
-    // ─── GNews ──────────────────────────────────────────────────────────────
-
-    @Provides
-    @Singleton
-    @GNewsClient
-    fun provideGNewsRetrofit(okHttpClient: OkHttpClient): Retrofit =
-        Retrofit.Builder()
-            .baseUrl(GNEWS_BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-    @Provides
-    @Singleton
-    fun provideGNewsApiService(
-        @GNewsClient retrofit: Retrofit
-    ): GNewsApiService = retrofit.create(GNewsApiService::class.java)
 }
