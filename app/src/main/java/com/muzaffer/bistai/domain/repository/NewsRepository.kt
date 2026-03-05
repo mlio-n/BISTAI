@@ -4,9 +4,10 @@ import com.muzaffer.bistai.domain.model.NewsItem
 
 /**
  * Haber kaynağı soyutlaması.
- * Şu an FakeNewsDataSource kullanıyor — ileride gerçek News API'ye geçilecek.
+ * Gerçek GNews API + FakeNewsDataSource (yedek) implementasyonu mevcuttur.
  */
 interface NewsRepository {
-    fun getNewsForAsset(symbol: String): List<NewsItem>
+    /** Verilen sembol için haber başlıklarını döner (ağ çağrısı içerebilir). */
+    suspend fun getNewsForAsset(symbol: String): List<NewsItem>
     fun getMacroContext(): String
 }
