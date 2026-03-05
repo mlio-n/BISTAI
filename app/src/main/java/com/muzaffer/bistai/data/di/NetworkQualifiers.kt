@@ -6,8 +6,3 @@ import javax.inject.Qualifier
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class YahooFinanceClient
-
-/** GNews Retrofit instance'ını işaretler. */
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class GNewsClient
