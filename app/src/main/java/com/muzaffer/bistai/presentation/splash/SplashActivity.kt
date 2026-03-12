@@ -26,6 +26,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.muzaffer.bistai.MainActivity
+import com.muzaffer.bistai.ui.theme.BullishGreen
+import com.muzaffer.bistai.ui.theme.GoldAccent
+import com.muzaffer.bistai.ui.theme.NavyBlueMedium
+import com.muzaffer.bistai.ui.theme.PureBlack
+import com.muzaffer.bistai.ui.theme.SlateBlue
+import com.muzaffer.bistai.ui.theme.White
 import kotlinx.coroutines.delay
 
 @SuppressLint("CustomSplashScreen")
@@ -44,14 +50,6 @@ class SplashActivity : ComponentActivity() {
 
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
-    val NavyDeep   = Color(0xFF020C1B)
-    val NavyMedium = Color(0xFF0D1F3C)
-    val GreenAccent = Color(0xFF00C853)
-    val GoldAccent  = Color(0xFFFFC107)
-    val White       = Color(0xFFFFFFFF)
-    val SlateBlue   = Color(0xFF8892B0)
-
-    // Animasyon değişkenleri
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val alpha by animateFloatAsState(
         targetValue = 1f,
@@ -83,7 +81,7 @@ fun SplashScreen(onFinished: () -> Unit) {
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
-                    colors = listOf(NavyDeep, NavyMedium, NavyDeep)
+                    colors = listOf(PureBlack, NavyBlueMedium, PureBlack)
                 )
             ),
         contentAlignment = Alignment.Center
@@ -151,7 +149,7 @@ fun SplashScreen(onFinished: () -> Unit) {
                     fillPath,
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            GreenAccent.copy(alpha = 0.25f),
+                            BullishGreen.copy(alpha = 0.25f),
                             Color.Transparent
                         )
                     )
@@ -164,21 +162,21 @@ fun SplashScreen(onFinished: () -> Unit) {
                 }
                 drawPath(
                     linePath,
-                    color = GreenAccent,
+                    color = BullishGreen,
                     style = Stroke(width = 4f, cap = StrokeCap.Round, join = StrokeJoin.Round)
                 )
 
                 // Veri noktaları
                 points.forEachIndexed { i, pt ->
-                    val dotColor = if (i == points.size - 1) GoldAccent else GreenAccent
+                    val dotColor = if (i == points.size - 1) GoldAccent else BullishGreen
                     val dotRadius = if (i == points.size - 1) 7f else 5f
-                    drawCircle(color = NavyDeep, radius = dotRadius + 2f, center = pt)
+                    drawCircle(color = PureBlack, radius = dotRadius + 2f, center = pt)
                     drawCircle(color = dotColor, radius = dotRadius, center = pt)
                 }
 
                 // Parlayan son nokta (zirve)
                 drawCircle(
-                    color = GreenAccent.copy(alpha = glowAlpha * 0.4f),
+                    color = BullishGreen.copy(alpha = glowAlpha * 0.4f),
                     radius = 18f,
                     center = points.last()
                 )
@@ -203,7 +201,7 @@ fun SplashScreen(onFinished: () -> Unit) {
                     .height(3.dp)
                     .background(
                         brush = Brush.horizontalGradient(
-                            colors = listOf(Color.Transparent, GreenAccent, Color.Transparent)
+                            colors = listOf(Color.Transparent, BullishGreen, Color.Transparent)
                         )
                     )
             )
@@ -230,12 +228,12 @@ fun SplashScreen(onFinished: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .size(6.dp)
-                        .background(GreenAccent, shape = androidx.compose.foundation.shape.CircleShape)
+                        .background(BullishGreen, shape = androidx.compose.foundation.shape.CircleShape)
                 )
                 Text(
                     "CANLI",
                     fontSize = 9.sp,
-                    color = GreenAccent,
+                    color = BullishGreen,
                     letterSpacing = 2.sp,
                     fontWeight = FontWeight.Bold
                 )
