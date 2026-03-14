@@ -1,5 +1,6 @@
 package com.muzaffer.bistai.data.di
 
+import com.muzaffer.bistai.BuildConfig
 import com.muzaffer.bistai.data.remote.StockApiService
 import dagger.Module
 import dagger.Provides
@@ -29,7 +30,8 @@ object NetworkModule {
     @Singleton
     fun provideLoggingInterceptor(): HttpLoggingInterceptor =
         HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+                    else HttpLoggingInterceptor.Level.NONE
         }
 
     /** Genel API istemcisi */
