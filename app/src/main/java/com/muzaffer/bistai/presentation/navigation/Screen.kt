@@ -54,7 +54,7 @@ enum class BottomNavItem(
     ),
     PROFILE(
         screen         = Screen.Profile,
-        label          = "Ayarlar",
+        label          = "Menü",
         selectedIcon   = Icons.Rounded.Menu,
         unselectedIcon = Icons.Rounded.Menu
     )

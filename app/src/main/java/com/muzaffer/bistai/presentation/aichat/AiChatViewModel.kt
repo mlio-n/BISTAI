@@ -49,7 +49,7 @@ class AiChatViewModel @Inject constructor(
                 it.copy(
                     messages = listOf(
                         ChatMessage(
-                            text = "Gemini API anahtarı tanımlı değil. Ayarlar sekmesinden kendi API anahtarınızı (BYOK) kaydedebilirsiniz.",
+                            text = "Gemini API anahtarı tanımlı değil. Menü sekmesinden kendi API anahtarınızı kaydedebilirsiniz.",
                             isFromUser = false
                         )
                     ),
