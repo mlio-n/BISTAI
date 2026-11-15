@@ -5,10 +5,9 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -56,7 +55,7 @@ enum class BottomNavItem(
     PROFILE(
         screen         = Screen.Profile,
         label          = "Ayarlar",
-        selectedIcon   = Icons.Filled.Settings,
-        unselectedIcon = Icons.Outlined.Settings
+        selectedIcon   = Icons.Rounded.Menu,
+        unselectedIcon = Icons.Rounded.Menu
     )
 }

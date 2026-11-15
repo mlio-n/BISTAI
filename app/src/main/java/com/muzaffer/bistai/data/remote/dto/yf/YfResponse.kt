@@ -21,3 +21,27 @@ data class YfQuoteDto(
     val marketCap: Long?,
     val regularMarketVolume: Long?
 )
+
+data class YfChartResponse(
+    val chart: YfChart?
+)
+
+data class YfChart(
+    val result: List<YfChartResult>?,
+    val error: Any?
+)
+
+data class YfChartResult(
+    val meta: YfChartMeta?
+)
+
+data class YfChartMeta(
+    val symbol: String?,
+    val shortName: String?,
+    val longName: String?,
+    val regularMarketPrice: Double?,
+    val regularMarketChangePercent: Double?,
+    val chartPreviousClose: Double?,
+    val previousClose: Double?,
+    val regularMarketVolume: Long?
+)
