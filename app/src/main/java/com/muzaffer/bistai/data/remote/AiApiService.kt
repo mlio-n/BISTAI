@@ -1,7 +1,7 @@
 package com.muzaffer.bistai.data.remote
 
 import android.util.Log
-import com.muzaffer.bistai.BuildConfig
+import com.muzaffer.bistai.data.local.prefs.ApiKeyManager
 import com.muzaffer.bistai.domain.model.AiPrediction
 import com.muzaffer.bistai.domain.model.NewsItem
 import com.muzaffer.bistai.domain.model.Trend
@@ -23,7 +23,9 @@ import javax.inject.Singleton
  * Medyum AI: Haber + makro bağlam + JSON çıktı formatı ile derinlemesine analiz.
  */
 @Singleton
-class AiApiService @Inject constructor() {
+class AiApiService @Inject constructor(
+    private val apiKeyManager: ApiKeyManager
+) {
 
     companion object {
         private const val TAG      = "BISTAI_AI"
@@ -36,7 +38,7 @@ class AiApiService @Inject constructor() {
         .readTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 
-    val isApiKeySet: Boolean get() = BuildConfig.GEMINI_API_KEY.isNotBlank()
+    val isApiKeySet: Boolean get() = apiKeyManager.getEffectiveApiKey().isNotBlank()
 
     // ─── Medyum AI Analizi ───────────────────────────────────────────────────
 
@@ -164,7 +166,7 @@ KURALLAR:
     // ─── REST Core ───────────────────────────────────────────────────────────
 
     private suspend fun generateContent(contents: List<JSONObject>): Result<String> {
-        val apiKey = BuildConfig.GEMINI_API_KEY
+        val apiKey = apiKeyManager.getEffectiveApiKey()
         val url = "$BASE_URL/$MODEL:generateContent"
         val body = JSONObject().apply {
             put("contents", JSONArray(contents))

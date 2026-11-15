@@ -5,17 +5,22 @@ import kotlinx.coroutines.flow.Flow
 
 interface PortfolioRepository {
     /**
-     * Kullanıcının portföyündeki tüm hisseleri stream olarak dinler.
+     * Kullanıcının portföyündeki tüm hisseleri yerel Room veritabanından (veya giriş yapıldıysa bulutla senkron) dinler.
      */
-    fun getPortfolio(uid: String): Flow<List<PortfolioItem>>
-    
+    fun getPortfolio(uid: String? = null): Flow<List<PortfolioItem>>
+
     /**
-     * Portföye yeni bir hisse ekler veya mevcut hissenin miktar/maliyetini günceller.
+     * Portföye yeni hisse ekler veya günceller. Misafir modunda yalnızca yerel Room veritabanına yazar.
      */
-    suspend fun addOrUpdatePortfolioItem(uid: String, item: PortfolioItem): Result<Unit>
-    
+    suspend fun addOrUpdatePortfolioItem(uid: String? = null, item: PortfolioItem): Result<Unit>
+
     /**
-     * Hissesi portföyden çıkarır.
+     * Hisseyi portföyden çıkarır. Misafir modunda yalnızca yerel Room veritabanından siler.
      */
-    suspend fun removePortfolioItem(uid: String, symbol: String): Result<Unit>
+    suspend fun removePortfolioItem(uid: String? = null, symbol: String): Result<Unit>
+
+    /**
+     * Yerel Room veritabanındaki misafir portföy verilerini kullanıcının Firestore hesabına yedekler.
+     */
+    suspend fun syncLocalToCloud(uid: String): Result<Unit>
 }

@@ -169,8 +169,8 @@ private fun StockList(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Eğer arama yapılmıyorsa ve kullanıcı giriş yaptıysa cüzdan özetini en üstte göster
-        if (searchQuery.isBlank() && uiState.isAuthenticated) {
+        // Eğer arama yapılmıyorsa cüzdan özetini en üstte göster (Misafir ve girişli mod)
+        if (searchQuery.isBlank()) {
             item {
                 PortfolioSummaryCard(
                     totalValue = uiState.currentTotalValue,

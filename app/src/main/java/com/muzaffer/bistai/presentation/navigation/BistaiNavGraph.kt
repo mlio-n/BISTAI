@@ -17,6 +17,7 @@ import com.muzaffer.bistai.presentation.auth.AuthViewModel
 import com.muzaffer.bistai.presentation.auth.LoginScreen
 import com.muzaffer.bistai.presentation.favorites.FavoritesScreen
 import com.muzaffer.bistai.presentation.portfolio.PortfolioScreen
+import com.muzaffer.bistai.presentation.profile.ProfileScreen
 import com.muzaffer.bistai.presentation.stockdetail.StockDetailScreen
 import com.muzaffer.bistai.presentation.theme.*
 import kotlinx.coroutines.launch
@@ -26,52 +27,38 @@ fun BistaiNavGraph(
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
-    val authState by authViewModel.authState.collectAsState()
-
-    // Eğer uygulama açıldığında kullanıcı varsa direkt portföye geç, yoksa logine dön
-    val startDestination = if (authState.isLoading) {
-        Screen.Login.route // Yüklenirken de login'de beklet, state değişince LaunchedEffect halleder
-    } else if (authState.user != null) {
-        Screen.Portfolio.route
-    } else {
-        Screen.Login.route
-    }
 
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = Screen.Home.route
     ) {
-        // ── Ana ekran: 3 sekme + HorizontalPager ──────────────────────
-        // ── Auth: Login Ekranı ────────────────────────────────────────────
+        // ── Ana ekran (Misafir modu varsayılan): 4 sekme + HorizontalPager ─
+        composable(Screen.Home.route) {
+            HomeScreen(
+                authViewModel = authViewModel,
+                onStockClick = { symbol ->
+                    navController.navigate(Screen.StockDetail.createRoute(symbol))
+                },
+                onNavigateToLogin = {
+                    navController.navigate(Screen.Login.route)
+                }
+            )
+        }
+
+        // ── Auth: Opsiyonel Login Ekranı (Bulut Yedekleme için) ───────────
         composable(Screen.Login.route) {
             LoginScreen(
                 authViewModel = authViewModel,
                 onLoginSuccess = {
-                    navController.navigate(Screen.Portfolio.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
-                    }
+                    navController.popBackStack(Screen.Home.route, inclusive = false)
+                },
+                onContinueAsGuest = {
+                    navController.popBackStack(Screen.Home.route, inclusive = false)
                 }
             )
         }
 
-        // ── Ana ekran: 3 sekme + HorizontalPager ──────────────────────
-        composable(Screen.Portfolio.route) {
-            // Kullanıcı bu ekrandayken çıkış yaparsa Logine at
-            LaunchedEffect(authState.user) {
-                if (authState.user == null && !authState.isLoading) {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Portfolio.route) { inclusive = true }
-                    }
-                }
-            }
-            MainTabsScreen(
-                onStockClick = { symbol ->
-                    navController.navigate(Screen.StockDetail.createRoute(symbol))
-                }
-            )
-        }
-
-        // ── Hisse Detay (pager dışında, tam ekran) ────────────────────
+        // ── Hisse Detay (pager dışında, tam ekran) ────────────────────────
         composable(
             route = Screen.StockDetail.route,
             arguments = listOf(navArgument("symbol") { type = NavType.StringType })
@@ -88,7 +75,11 @@ fun BistaiNavGraph(
 // ─── Ana Sekmeler (HorizontalPager) ──────────────────────────────────────────
 
 @Composable
-private fun MainTabsScreen(onStockClick: (String) -> Unit) {
+private fun HomeScreen(
+    authViewModel: AuthViewModel,
+    onStockClick: (String) -> Unit,
+    onNavigateToLogin: () -> Unit
+) {
     val tabs = BottomNavItem.entries
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
@@ -115,6 +106,10 @@ private fun MainTabsScreen(onStockClick: (String) -> Unit) {
                 BottomNavItem.PORTFOLIO -> PortfolioScreen(onStockClick = onStockClick)
                 BottomNavItem.FAVORITES -> FavoritesScreen(onStockClick = onStockClick)
                 BottomNavItem.AI_CHAT   -> AiChatScreen()
+                BottomNavItem.PROFILE   -> ProfileScreen(
+                    authViewModel = authViewModel,
+                    onNavigateToLogin = onNavigateToLogin
+                )
             }
         }
     }
@@ -142,7 +137,13 @@ private fun BistaiBottomBar(
                         contentDescription = item.label
                     )
                 },
-                label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
+                label = {
+                    Text(
+                        text = item.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1
+                    )
+                },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor   = if (item == BottomNavItem.AI_CHAT) GoldAccent else BullishGreen,
                     selectedTextColor   = if (item == BottomNavItem.AI_CHAT) GoldAccent else BullishGreen,

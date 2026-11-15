@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.muzaffer.bistai.domain.repository.AnalysisSource
 import com.muzaffer.bistai.presentation.components.ChatBubble
 import com.muzaffer.bistai.presentation.theme.*
+import kotlinx.coroutines.launch
 
 // Hazır soru Chips listesi
 private val QUICK_QUESTIONS = listOf(
@@ -51,6 +52,9 @@ fun StockDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var inputText by remember { mutableStateOf("") }
+    var showPortfolioSheet by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
 
@@ -90,7 +94,12 @@ fun StockDetailScreen(
                 }
 
                 // Sembol rozeti
-                item { SymbolBadge(symbol = symbol) }
+                item {
+                    SymbolBadge(
+                        symbol = symbol,
+                        onAddToPortfolioClick = { showPortfolioSheet = true }
+                    )
+                }
 
                 // Gemini tek seferlik analiz kartı
                 item {
@@ -190,6 +199,28 @@ fun StockDetailScreen(
                 }
             )
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 72.dp)
+        )
+    }
+
+    if (showPortfolioSheet) {
+        PortfolioBottomSheet(
+            symbol = symbol,
+            onDismiss = { showPortfolioSheet = false },
+            onSave = { lot, cost ->
+                viewModel.addToPortfolio(lot, cost) { _, msg ->
+                    showPortfolioSheet = false
+                    if (!msg.isNullOrBlank()) {
+                        coroutineScope.launch { snackbarHostState.showSnackbar(msg) }
+                    }
+                }
+            }
+        )
     }
 }
 
@@ -282,25 +313,43 @@ private fun TopBar(symbol: String, onBack: () -> Unit, onRefresh: () -> Unit) {
 // ─── Symbol Badge ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun SymbolBadge(symbol: String) {
+private fun SymbolBadge(
+    symbol: String,
+    onAddToPortfolioClick: () -> Unit
+) {
     Surface(shape = RoundedCornerShape(20.dp), color = NavyBlueSurface, modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Brush.radialGradient(colors = listOf(BullishGreen.copy(alpha = 0.2f), NavyBlueMedium))),
-                contentAlignment = Alignment.Center
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(symbol.take(2), style = MaterialTheme.typography.titleLarge, color = BullishGreen, fontWeight = FontWeight.Black)
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Brush.radialGradient(colors = listOf(BullishGreen.copy(alpha = 0.2f), NavyBlueMedium))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(symbol.take(2), style = MaterialTheme.typography.titleLarge, color = BullishGreen, fontWeight = FontWeight.Black)
+                }
+                Column {
+                    Text(symbol, style = MaterialTheme.typography.titleLarge, color = White, fontWeight = FontWeight.Bold)
+                    Text("BIST • Türk Lirası", style = MaterialTheme.typography.bodySmall, color = SlateBlue)
+                }
             }
-            Column {
-                Text(symbol, style = MaterialTheme.typography.titleLarge, color = White, fontWeight = FontWeight.Bold)
-                Text("BIST • Türk Lirası", style = MaterialTheme.typography.bodySmall, color = SlateBlue)
+            FilledTonalButton(
+                onClick = onAddToPortfolioClick,
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = BullishGreen.copy(alpha = 0.15f),
+                    contentColor = BullishGreen
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Portföye Ekle", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             }
         }
     }

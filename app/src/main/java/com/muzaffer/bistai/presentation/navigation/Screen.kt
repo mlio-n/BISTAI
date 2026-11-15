@@ -1,22 +1,26 @@
 package com.muzaffer.bistai.presentation.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.automirrored.outlined.ShowChart
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.ShowChart
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
  * Uygulamadaki tüm ekran rotalarını tanımlayan sealed class.
  */
 sealed class Screen(val route: String) {
-    data object Login      : Screen("login")
-    data object Portfolio  : Screen("portfolio")
-    data object Favorites  : Screen("favorites")
-    data object AiChat     : Screen("ai_chat")
+    data object Home        : Screen("home")
+    data object Login       : Screen("login")
+    data object Portfolio   : Screen("portfolio")
+    data object Favorites   : Screen("favorites")
+    data object AiChat      : Screen("ai_chat")
+    data object Profile     : Screen("profile")
     data object StockDetail : Screen("stock_detail/{symbol}") {
         fun createRoute(symbol: String) = "stock_detail/$symbol"
     }
@@ -32,21 +36,27 @@ enum class BottomNavItem(
     val unselectedIcon: ImageVector
 ) {
     PORTFOLIO(
-        screen        = Screen.Portfolio,
-        label         = "Portföy",
-        selectedIcon  = Icons.Filled.ShowChart,
-        unselectedIcon = Icons.Outlined.ShowChart
+        screen         = Screen.Portfolio,
+        label          = "Portföy",
+        selectedIcon   = Icons.AutoMirrored.Filled.ShowChart,
+        unselectedIcon = Icons.AutoMirrored.Outlined.ShowChart
     ),
     FAVORITES(
-        screen        = Screen.Favorites,
-        label         = "Favorilerim",
-        selectedIcon  = Icons.Filled.Favorite,
+        screen         = Screen.Favorites,
+        label          = "Favoriler",
+        selectedIcon   = Icons.Filled.Favorite,
         unselectedIcon = Icons.Outlined.FavoriteBorder
     ),
     AI_CHAT(
-        screen        = Screen.AiChat,
-        label         = "BISTAI",
-        selectedIcon  = Icons.Filled.AutoAwesome,
+        screen         = Screen.AiChat,
+        label          = "BISTAI",
+        selectedIcon   = Icons.Filled.AutoAwesome,
         unselectedIcon = Icons.Outlined.AutoAwesome
+    ),
+    PROFILE(
+        screen         = Screen.Profile,
+        label          = "Ayarlar",
+        selectedIcon   = Icons.Filled.Settings,
+        unselectedIcon = Icons.Outlined.Settings
     )
 }

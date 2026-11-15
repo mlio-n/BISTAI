@@ -2,10 +2,11 @@ package com.muzaffer.bistai.presentation.auth
 
 import android.content.Context
 import android.util.Log
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Analytics
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,7 +31,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun LoginScreen(
     authViewModel: AuthViewModel,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    onContinueAsGuest: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -56,10 +58,10 @@ fun LoginScreen(
         ) {
             // İkon / Logo
             Icon(
-                painter = painterResource(id = R.drawable.ic_bistai_logo_large), 
+                imageVector = Icons.Rounded.Analytics,
                 contentDescription = "BISTAI Logo",
-                tint = Color.Unspecified, 
-                modifier = Modifier.size(120.dp)
+                tint = Color(0xFF00C853),
+                modifier = Modifier.size(96.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -112,6 +114,16 @@ fun LoginScreen(
                         color = Color.Black,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                TextButton(onClick = onContinueAsGuest) {
+                    Text(
+                        text = "Misafir Olarak Devam Et",
+                        color = Color.LightGray,
+                        fontSize = 14.sp
                     )
                 }
                 

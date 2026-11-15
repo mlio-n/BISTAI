@@ -173,25 +173,24 @@ class StockDetailViewModel @Inject constructor(
     }
 
     /**
-     * Firestore Portföy Koleksiyonuna (users/{uid}/portfolio/{symbol}) hisseyi kaydeder.
+     * Portföye hisse kaydeder. Misafir modunda yalnızca yerel Room veritabanına yazar;
+     * giriş yapılmışsa Firestore (users/{uid}/portfolio/{symbol}) ile de senkronize eder.
      */
     fun addToPortfolio(lotSize: Double, averageCost: Double, onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
-            val user = authRepository.getCurrentUser()
-            if (user == null) {
-                onResult(false, "İşlem yapmak için giriş yapmalısınız.")
-                return@launch
-            }
-            
+            val uid = authRepository.getCurrentUser()?.uid
             val item = com.muzaffer.bistai.domain.model.PortfolioItem(
                 symbol = uiState.value.symbol,
                 lotSize = lotSize,
                 averageCost = averageCost
             )
-            
-            val result = portfolioRepository.addOrUpdatePortfolioItem(user.uid, item)
+
+            val result = portfolioRepository.addOrUpdatePortfolioItem(uid, item)
             if (result.isSuccess) {
-                onResult(true, "Portföye başarıyla eklendi.")
+                onResult(
+                    true,
+                    if (uid != null) "Portföye ve buluta kaydedildi." else "Yerel portföye kaydedildi."
+                )
             } else {
                 onResult(false, result.exceptionOrNull()?.localizedMessage ?: "Kayıt sırasında hata oluştu.")
             }

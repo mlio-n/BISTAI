@@ -1,25 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  BISTAI Adaptif İkon — Background Katmanı (V1.3)
-  Solid derin lacivert — markanın ana rengi
--->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Derin lacivert zemin -->
     <path
         android:fillColor="#020C1B"
-        android:pathData="M0,0 L108,0 L108,108 L0,108 Z"/>
-
-    <!-- Subtle ızgara çizgileri (finans estetik) -->
-    <path
-        android:strokeColor="#0A192F"
-        android:strokeWidth="0.8"
-        android:fillColor="#00000000"
-        android:pathData="M0,27 L108,27 M0,54 L108,54 M0,81 L108,81
-                          M27,0 L27,108 M54,0 L54,108 M81,0 L81,108"/>
+        android:pathData="M0,0 L108,0 L108,108 L0,108 Z" />
 
 </vector>

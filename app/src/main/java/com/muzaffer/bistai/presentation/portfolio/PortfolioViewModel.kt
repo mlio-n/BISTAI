@@ -104,18 +104,21 @@ class PortfolioViewModel @Inject constructor(
         }
     }
 
-    /** Kullanıcı girişini ve cüzdanını dinler. */
+    /** Kullanıcı girişini ve yerel/bulut cüzdanını dinler. Misafir modunda yerel Room verisini kullanır. */
     private fun observeAuthAndPortfolio() {
         viewModelScope.launch {
             authRepository.getAuthState().collectLatest { user ->
                 _uiState.update { it.copy(isAuthenticated = user != null) }
-                
+
                 if (user != null) {
+                    portfolioRepository.syncLocalToCloud(user.uid)
                     portfolioRepository.getPortfolio(user.uid).collect { items ->
                         _uiState.update { it.copy(portfolioItems = items) }
                     }
                 } else {
-                    _uiState.update { it.copy(portfolioItems = emptyList()) }
+                    portfolioRepository.getPortfolio(null).collect { items ->
+                        _uiState.update { it.copy(portfolioItems = items) }
+                    }
                 }
             }
         }

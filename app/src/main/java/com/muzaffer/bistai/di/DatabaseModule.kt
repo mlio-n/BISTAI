@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.muzaffer.bistai.core.Constants
 import com.muzaffer.bistai.data.local.dao.AnalysisCacheDao
+import com.muzaffer.bistai.data.local.dao.PortfolioDao
 import com.muzaffer.bistai.data.local.dao.StockDao
 import com.muzaffer.bistai.data.local.database.BistaiDatabase
 import com.muzaffer.bistai.data.repository.WatchlistRepositoryImpl
@@ -36,6 +37,10 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideAnalysisCacheDao(db: BistaiDatabase): AnalysisCacheDao = db.analysisCacheDao()
+
+    @Provides
+    @Singleton
+    fun providePortfolioDao(db: BistaiDatabase): PortfolioDao = db.portfolioDao()
 }
 
 @Module

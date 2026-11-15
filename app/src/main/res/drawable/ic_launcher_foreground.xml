@@ -1,63 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  BISTAI Launcher Foreground — V1.3.1
-  Yaklaşım: Metin/harf yok. Saf grafik: yükselen trend çizgisi + daireler.
-  Bu tasarım hem round hem square launcher'da profesyonel görünür.
-  Güvenli alan: 27dp-81dp arası (toplam 108dp içinde)
--->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Ana trend çizgisi — kalın, yumuşak köşeler -->
-    <path
-        android:strokeColor="#00C853"
-        android:strokeWidth="5.5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000"
-        android:pathData="M28,76 L40,60 L54,68 L68,44 L82,32"/>
-
-    <!-- Ok ucu (sağ üstte) -->
-    <path
-        android:fillColor="#00C853"
-        android:pathData="M82,32 L72,38 L76,47 Z"/>
-
-    <!-- Nokta vurgular (veri noktaları) -->
-    <!-- Nokta 1: Sol -->
-    <path
-        android:fillColor="#00C853"
-        android:pathData="M28,76 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0"/>
-
-    <!-- Nokta 2: Orta -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:alpha="0.6"
-        android:pathData="M54,68 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"/>
-
-    <!-- Nokta 3: Üst (zirve - altın vurgu) -->
-    <path
-        android:fillColor="#FFC107"
-        android:pathData="M68,44 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0"/>
-
-    <!-- Alt yatay referans çizgisi (hafif) -->
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="1"
-        android:alpha="0.15"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"
-        android:pathData="M28,80 L85,80"/>
-
-    <!-- Sol dikey referans çizgisi (hafif) -->
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="1"
-        android:alpha="0.15"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"
-        android:pathData="M24,32 L24,80"/>
+    <group
+        android:translateX="27"
+        android:translateY="27"
+        android:scaleX="2.25"
+        android:scaleY="2.25">
+        <path
+            android:fillColor="#00C853"
+            android:pathData="M16,6 L18.29,8.29 L13.41,13.17 L9.41,9.17 L2,16.59 L3.41,18 L9.41,12 L13.41,16 L19.71,9.71 L22,12 L22,6 Z" />
+    </group>
 
 </vector>
