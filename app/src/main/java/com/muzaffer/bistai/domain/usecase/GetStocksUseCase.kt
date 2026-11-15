@@ -2,7 +2,7 @@ package com.muzaffer.bistai.domain.usecase
 
 import com.muzaffer.bistai.domain.model.Stock
 import com.muzaffer.bistai.domain.repository.StockRepository
-import com.muzaffer.bistai.domain.util.Resource
+import com.muzaffer.bistai.core.Resource
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 

@@ -3,7 +3,7 @@ package com.muzaffer.bistai.data.repository
 import com.muzaffer.bistai.data.remote.RemoteStockDataSource
 import com.muzaffer.bistai.domain.model.Stock
 import com.muzaffer.bistai.domain.repository.StockRepository
-import com.muzaffer.bistai.domain.util.Resource
+import com.muzaffer.bistai.core.Resource
 import com.muzaffer.bistai.data.mapper.toDomain
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

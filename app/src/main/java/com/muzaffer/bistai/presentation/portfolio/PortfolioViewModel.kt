@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.muzaffer.bistai.domain.model.Stock
 import com.muzaffer.bistai.domain.repository.WatchlistRepository
 import com.muzaffer.bistai.domain.usecase.GetStocksUseCase
-import com.muzaffer.bistai.domain.util.Resource
+import com.muzaffer.bistai.core.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

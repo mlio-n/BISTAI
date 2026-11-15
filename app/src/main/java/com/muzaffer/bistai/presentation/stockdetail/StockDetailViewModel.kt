@@ -12,6 +12,7 @@ import com.muzaffer.bistai.domain.repository.AnalysisSource
 import com.muzaffer.bistai.domain.repository.AuthRepository
 import com.muzaffer.bistai.domain.repository.NewsRepository
 import com.muzaffer.bistai.domain.repository.PortfolioRepository
+import com.muzaffer.bistai.presentation.components.ChatMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -23,7 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.muzaffer.bistai.presentation.portfolio.PortfolioViewModel
 import com.muzaffer.bistai.presentation.portfolio.StockCard
-import com.muzaffer.bistai.ui.theme.*
+import com.muzaffer.bistai.presentation.theme.*
 
 @Composable
 fun FavoritesScreen(

@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.muzaffer.bistai.data.remote.AiApiService
 import com.muzaffer.bistai.data.remote.SimpleChat
-import com.muzaffer.bistai.presentation.stockdetail.ChatMessage
+import com.muzaffer.bistai.presentation.components.ChatMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

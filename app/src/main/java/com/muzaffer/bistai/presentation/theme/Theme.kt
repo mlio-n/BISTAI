@@ -1,4 +1,4 @@
-package com.muzaffer.bistai.ui.theme
+package com.muzaffer.bistai.presentation.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme

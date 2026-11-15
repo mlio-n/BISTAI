@@ -1,5 +1,6 @@
-package com.muzaffer.bistai.data.di
+package com.muzaffer.bistai.di
 
+import com.muzaffer.bistai.core.Constants
 import com.muzaffer.bistai.data.remote.StockApiService
 import dagger.Module
 import dagger.Provides
@@ -21,9 +22,6 @@ annotation class YfHttpClient
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-
-    private const val BASE_URL = "https://api.bistai.com/v1/"
-    private const val YF_BASE_URL = "https://query1.finance.yahoo.com/"
 
     @Provides
     @Singleton
@@ -87,7 +85,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit =
         Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(Constants.BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -103,7 +101,7 @@ object NetworkModule {
         @YfHttpClient yfClient: OkHttpClient
     ): com.muzaffer.bistai.data.remote.YfApiService =
         Retrofit.Builder()
-            .baseUrl(YF_BASE_URL)
+            .baseUrl(Constants.YF_BASE_URL)
             .client(yfClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

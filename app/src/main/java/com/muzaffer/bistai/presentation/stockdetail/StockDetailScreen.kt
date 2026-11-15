@@ -32,7 +32,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.muzaffer.bistai.domain.repository.AnalysisSource
 import com.muzaffer.bistai.presentation.components.ChatBubble
-import com.muzaffer.bistai.ui.theme.*
+import com.muzaffer.bistai.presentation.theme.*
 
 // Hazır soru Chips listesi
 private val QUICK_QUESTIONS = listOf(

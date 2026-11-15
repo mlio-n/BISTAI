@@ -1,4 +1,4 @@
-package com.muzaffer.bistai.data.di
+package com.muzaffer.bistai.di
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore

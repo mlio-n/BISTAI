@@ -1,6 +1,7 @@
-package com.muzaffer.bistai.data.local
+package com.muzaffer.bistai.data.local.dao
 
 import androidx.room.*
+import com.muzaffer.bistai.data.local.entity.AnalysisCacheEntity
 
 @Dao
 interface AnalysisCacheDao {

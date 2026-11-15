@@ -11,8 +11,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
-import com.muzaffer.bistai.ui.theme.NavyBlueMedium
-import com.muzaffer.bistai.ui.theme.NavyBlueSurface
+import com.muzaffer.bistai.presentation.theme.NavyBlueMedium
+import com.muzaffer.bistai.presentation.theme.NavyBlueSurface
 
 /**
  * Tek bir shimmer hisse kartı iskeleti.

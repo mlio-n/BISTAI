@@ -32,7 +32,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.muzaffer.bistai.domain.model.Stock
 import com.muzaffer.bistai.presentation.components.ShimmerStockCard
-import com.muzaffer.bistai.ui.theme.*
+import com.muzaffer.bistai.presentation.theme.*
 
 @Composable
 fun PortfolioScreen(

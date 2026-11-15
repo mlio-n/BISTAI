@@ -1,8 +1,9 @@
-package com.muzaffer.bistai.data.di
+package com.muzaffer.bistai.di
 
 import android.content.Context
 import androidx.room.Room
-import com.muzaffer.bistai.data.local.AnalysisCacheDao
+import com.muzaffer.bistai.core.Constants
+import com.muzaffer.bistai.data.local.dao.AnalysisCacheDao
 import com.muzaffer.bistai.data.local.dao.StockDao
 import com.muzaffer.bistai.data.local.database.BistaiDatabase
 import com.muzaffer.bistai.data.repository.WatchlistRepositoryImpl
@@ -25,7 +26,7 @@ object DatabaseModule {
         Room.databaseBuilder(
             context,
             BistaiDatabase::class.java,
-            "bistai_database"
+            Constants.DATABASE_NAME
         ).fallbackToDestructiveMigration().build()
 
     @Provides

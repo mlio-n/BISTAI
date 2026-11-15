@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.muzaffer.bistai.presentation.components.ChatBubble
-import com.muzaffer.bistai.ui.theme.*
+import com.muzaffer.bistai.presentation.theme.*
 
 private val QUICK_QUESTIONS = listOf(
     "BIST 100 bugün nasıl?",

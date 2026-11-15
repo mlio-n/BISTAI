@@ -14,8 +14,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.muzaffer.bistai.presentation.stockdetail.ChatMessage
-import com.muzaffer.bistai.ui.theme.*
+import com.muzaffer.bistai.presentation.theme.*
 
 /**
  * Tek bir sohbet mesajı balonu.

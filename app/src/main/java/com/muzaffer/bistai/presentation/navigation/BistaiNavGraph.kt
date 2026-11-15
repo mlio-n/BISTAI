@@ -18,7 +18,7 @@ import com.muzaffer.bistai.presentation.auth.LoginScreen
 import com.muzaffer.bistai.presentation.favorites.FavoritesScreen
 import com.muzaffer.bistai.presentation.portfolio.PortfolioScreen
 import com.muzaffer.bistai.presentation.stockdetail.StockDetailScreen
-import com.muzaffer.bistai.ui.theme.*
+import com.muzaffer.bistai.presentation.theme.*
 import kotlinx.coroutines.launch
 
 @Composable

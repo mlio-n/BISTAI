@@ -2,8 +2,8 @@ package com.muzaffer.bistai.data.repository
 
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
-import com.muzaffer.bistai.data.local.AnalysisCacheDao
-import com.muzaffer.bistai.data.local.AnalysisCacheEntity
+import com.muzaffer.bistai.data.local.dao.AnalysisCacheDao
+import com.muzaffer.bistai.data.local.entity.AnalysisCacheEntity
 import com.muzaffer.bistai.data.remote.AiApiService
 import com.muzaffer.bistai.domain.model.AiPrediction
 import com.muzaffer.bistai.domain.model.NewsItem

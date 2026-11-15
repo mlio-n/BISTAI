@@ -1,4 +1,4 @@
-package com.muzaffer.bistai.presentation.stockdetail
+package com.muzaffer.bistai.presentation.components
 
 /**
  * Bir chat mesajını temsil eden model.

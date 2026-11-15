@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.muzaffer.bistai.presentation.navigation.BistaiNavGraph
-import com.muzaffer.bistai.ui.theme.BISTAITheme
+import com.muzaffer.bistai.presentation.theme.BISTAITheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

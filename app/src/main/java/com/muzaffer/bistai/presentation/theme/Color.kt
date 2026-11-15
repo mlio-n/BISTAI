@@ -1,4 +1,4 @@
-package com.muzaffer.bistai.ui.theme
+package com.muzaffer.bistai.presentation.theme
 
 import androidx.compose.ui.graphics.Color
 

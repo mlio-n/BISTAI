@@ -1,4 +1,4 @@
-package com.muzaffer.bistai.data.di
+package com.muzaffer.bistai.di
 
 import com.muzaffer.bistai.data.repository.AnalysisRepositoryImpl
 import com.muzaffer.bistai.data.repository.StockRepositoryImpl

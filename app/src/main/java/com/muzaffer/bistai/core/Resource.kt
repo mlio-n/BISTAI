@@ -1,4 +1,4 @@
-package com.muzaffer.bistai.domain.util
+package com.muzaffer.bistai.core
 
 /**
  * Ağ/veritabanı işlemlerinin sonucunu taşıyan generic sarmalayıcı.

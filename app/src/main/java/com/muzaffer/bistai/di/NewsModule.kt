@@ -1,4 +1,4 @@
-package com.muzaffer.bistai.data.di
+package com.muzaffer.bistai.di
 
 import com.muzaffer.bistai.data.repository.NewsRepositoryImpl
 import com.muzaffer.bistai.domain.repository.NewsRepository

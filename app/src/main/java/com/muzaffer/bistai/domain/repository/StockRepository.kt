@@ -1,7 +1,7 @@
 package com.muzaffer.bistai.domain.repository
 
 import com.muzaffer.bistai.domain.model.Stock
-import com.muzaffer.bistai.domain.util.Resource
+import com.muzaffer.bistai.core.Resource
 import kotlinx.coroutines.flow.Flow
 
 /**
