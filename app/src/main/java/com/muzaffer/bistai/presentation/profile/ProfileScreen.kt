@@ -13,9 +13,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -25,10 +27,13 @@ import com.muzaffer.bistai.presentation.theme.*
 @Composable
 fun ProfileScreen(
     authViewModel: AuthViewModel,
-    onNavigateToLogin: () -> Unit,
+    onNavigateToLogin: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val authState by authViewModel.authState.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val activeUser = authState.user ?: uiState.user
     var showApiKey by remember { mutableStateOf(false) }
 
     Box(
@@ -36,34 +41,56 @@ fun ProfileScreen(
             .fillMaxSize()
             .background(brush = Brush.verticalGradient(colors = listOf(PureBlack, NavyBlueMedium, PureBlack)))
     ) {
-        if (uiState.user == null) {
-            Button(
-                onClick = onNavigateToLogin,
+        if (activeUser == null) {
+            Column(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .height(52.dp)
-                    .widthIn(min = 200.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = BullishGreen,
-                    contentColor = PureBlack
-                ),
-                shape = RoundedCornerShape(14.dp)
+                    .padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "Giriş Yap",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Button(
+                    onClick = { authViewModel.signInWithGoogle(context) },
+                    enabled = !authState.isLoading,
+                    modifier = Modifier
+                        .height(52.dp)
+                        .widthIn(min = 200.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BullishGreen,
+                        contentColor = PureBlack
+                    ),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    if (authState.isLoading) {
+                        CircularProgressIndicator(
+                            color = PureBlack,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "Giriş Yap",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                authState.error?.let { errorMsg ->
+                    Text(
+                        text = errorMsg,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = BearishRed,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         } else {
-            val currentUser = uiState.user
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                // ── Başlık ───────────────────────────────────────────────────
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -107,7 +134,6 @@ fun ProfileScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // ── Hesap & Bulut Yedekleme Kartı ────────────────────────
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = NavyBlueSurface,
@@ -134,7 +160,6 @@ fun ProfileScreen(
                                 )
                             }
 
-                            // Yerel veri özeti
                             Text(
                                 text = "Yerel Room veritabanında ${uiState.portfolioCount} portföy hissesi ve ${uiState.favoritesCount} favori hisse kayıtlı.",
                                 style = MaterialTheme.typography.bodySmall,
@@ -148,12 +173,12 @@ fun ProfileScreen(
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
                                     Text(
-                                        text = currentUser?.displayName ?: "Kullanıcı",
+                                        text = activeUser.displayName ?: "Kullanıcı",
                                         style = MaterialTheme.typography.titleSmall,
                                         color = White,
                                         fontWeight = FontWeight.Bold
                                     )
-                                    currentUser?.email?.let { email ->
+                                    activeUser.email?.let { email ->
                                         Text(
                                             text = email,
                                             style = MaterialTheme.typography.bodySmall,
@@ -200,7 +225,6 @@ fun ProfileScreen(
                         }
                     }
 
-                    // ── BYOK (Gemini API Anahtarı) Kartı ─────────────────────
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = NavyBlueSurface,
@@ -304,7 +328,6 @@ fun ProfileScreen(
                         }
                     }
 
-                    // ── Durum Mesajı ─────────────────────────────────────────
                     uiState.statusMessage?.let { msg ->
                         Surface(
                             shape = RoundedCornerShape(12.dp),

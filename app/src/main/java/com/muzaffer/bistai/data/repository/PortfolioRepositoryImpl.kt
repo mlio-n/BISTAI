@@ -1,5 +1,7 @@
 package com.muzaffer.bistai.data.repository
 
+import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.muzaffer.bistai.core.Constants
 import com.muzaffer.bistai.data.local.dao.PortfolioDao
@@ -21,6 +23,11 @@ class PortfolioRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : PortfolioRepository {
 
+    private fun portfolioCollection(uid: String): CollectionReference =
+        firestore.collection(Constants.USERS_COLLECTION)
+            .document(uid)
+            .collection(Constants.PORTFOLIO_COLLECTION)
+
     override fun getPortfolio(uid: String?): Flow<List<PortfolioItem>> {
         if (uid.isNullOrBlank()) {
             return portfolioDao.getAllPortfolioItems().map { entities ->
@@ -29,26 +36,28 @@ class PortfolioRepositoryImpl @Inject constructor(
         }
 
         return channelFlow {
-            val collectionRef = firestore.collection(Constants.USERS_COLLECTION)
-                .document(uid)
-                .collection(Constants.PORTFOLIO_COLLECTION)
-
-            val subscription = collectionRef.addSnapshotListener { snapshot, _ ->
-                if (snapshot != null) {
-                    val cloudItems = snapshot.documents.mapNotNull { doc ->
-                        doc.toObject(PortfolioItem::class.java)?.copy(symbol = doc.id)
-                    }
-                    if (cloudItems.isNotEmpty()) {
-                        launch {
-                            portfolioDao.upsertAll(cloudItems.map { PortfolioEntity.fromDomain(it) })
-                        }
-                    }
-                }
-            }
-
             val localJob = launch {
                 portfolioDao.getAllPortfolioItems().collect { entities ->
                     send(entities.map { it.toDomain() })
+                }
+            }
+
+            syncLocalToCloud(uid)
+
+            val collectionRef = portfolioCollection(uid)
+            val subscription = collectionRef.addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+
+                val cloudItems = snapshot.documents.mapNotNull { it.toPortfolioItem() }
+                launch {
+                    if (cloudItems.isNotEmpty()) {
+                        portfolioDao.upsertAll(cloudItems.map { PortfolioEntity.fromDomain(it) })
+                        if (!snapshot.metadata.isFromCache && !snapshot.metadata.hasPendingWrites()) {
+                            portfolioDao.deleteItemsNotIn(cloudItems.map { it.symbol })
+                        }
+                    } else if (!snapshot.metadata.isFromCache && !snapshot.metadata.hasPendingWrites()) {
+                        portfolioDao.clearAll()
+                    }
                 }
             }
 
@@ -61,13 +70,12 @@ class PortfolioRepositoryImpl @Inject constructor(
 
     override suspend fun addOrUpdatePortfolioItem(uid: String?, item: PortfolioItem): Result<Unit> {
         return try {
-            portfolioDao.upsertPortfolioItem(PortfolioEntity.fromDomain(item))
+            val normalizedItem = item.copy(symbol = item.symbol.trim().uppercase())
+            portfolioDao.upsertPortfolioItem(PortfolioEntity.fromDomain(normalizedItem))
             if (!uid.isNullOrBlank()) {
-                firestore.collection(Constants.USERS_COLLECTION)
-                    .document(uid)
-                    .collection(Constants.PORTFOLIO_COLLECTION)
-                    .document(item.symbol)
-                    .set(item)
+                portfolioCollection(uid)
+                    .document(normalizedItem.symbol)
+                    .set(normalizedItem.toFirestoreMap())
                     .await()
             }
             Result.success(Unit)
@@ -78,12 +86,11 @@ class PortfolioRepositoryImpl @Inject constructor(
 
     override suspend fun removePortfolioItem(uid: String?, symbol: String): Result<Unit> {
         return try {
-            portfolioDao.deletePortfolioItem(symbol)
+            val normalizedSymbol = symbol.trim().uppercase()
+            portfolioDao.deletePortfolioItem(normalizedSymbol)
             if (!uid.isNullOrBlank()) {
-                firestore.collection(Constants.USERS_COLLECTION)
-                    .document(uid)
-                    .collection(Constants.PORTFOLIO_COLLECTION)
-                    .document(symbol)
+                portfolioCollection(uid)
+                    .document(normalizedSymbol)
                     .delete()
                     .await()
             }
@@ -95,19 +102,62 @@ class PortfolioRepositoryImpl @Inject constructor(
 
     override suspend fun syncLocalToCloud(uid: String): Result<Unit> {
         return try {
-            val localItems = portfolioDao.getAllPortfolioItemsOnce()
-            val collectionRef = firestore.collection(Constants.USERS_COLLECTION)
-                .document(uid)
-                .collection(Constants.PORTFOLIO_COLLECTION)
+            val collectionRef = portfolioCollection(uid)
+            val localEntities = portfolioDao.getAllPortfolioItemsOnce()
+            val remoteSnapshot = collectionRef.get().await()
 
-            localItems.forEach { entity ->
-                collectionRef.document(entity.symbol)
-                    .set(entity.toDomain())
-                    .await()
+            val remoteMap = remoteSnapshot.documents
+                .mapNotNull { it.toPortfolioItem() }
+                .associateBy { it.symbol }
+
+            val batch = firestore.batch()
+            var hasBatchWrites = false
+            val itemsToUpsertLocally = mutableListOf<PortfolioEntity>()
+
+            localEntities.forEach { localEntity ->
+                val normalizedSymbol = localEntity.symbol.trim().uppercase()
+                val localItem = localEntity.toDomain().copy(symbol = normalizedSymbol)
+                val remoteItem = remoteMap[normalizedSymbol]
+
+                if (remoteItem == null || localItem.addedAt >= remoteItem.addedAt) {
+                    batch.set(collectionRef.document(normalizedSymbol), localItem.toFirestoreMap())
+                    hasBatchWrites = true
+                } else {
+                    itemsToUpsertLocally.add(PortfolioEntity.fromDomain(remoteItem))
+                }
             }
+
+            val localSymbols = localEntities.map { it.symbol.trim().uppercase() }.toSet()
+            remoteMap.values
+                .filter { it.symbol !in localSymbols }
+                .forEach { remoteOnlyItem ->
+                    itemsToUpsertLocally.add(PortfolioEntity.fromDomain(remoteOnlyItem))
+                }
+
+            if (hasBatchWrites) {
+                batch.commit().await()
+            }
+            if (itemsToUpsertLocally.isNotEmpty()) {
+                portfolioDao.upsertAll(itemsToUpsertLocally)
+            }
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
+
+    private fun DocumentSnapshot.toPortfolioItem(): PortfolioItem? {
+        val item = toObject(PortfolioItem::class.java) ?: return null
+        val normalizedSymbol = item.symbol.ifBlank { id }.trim().uppercase()
+        if (normalizedSymbol.isBlank()) return null
+        return item.copy(symbol = normalizedSymbol)
+    }
+
+    private fun PortfolioItem.toFirestoreMap(): Map<String, Any> = mapOf(
+        "symbol" to symbol,
+        "lotSize" to lotSize,
+        "averageCost" to averageCost,
+        "addedAt" to addedAt
+    )
 }

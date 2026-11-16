@@ -32,7 +32,6 @@ fun BistaiNavGraph(
         navController = navController,
         startDestination = Screen.Home.route
     ) {
-        // ── Ana ekran (Misafir modu varsayılan): 4 sekme + HorizontalPager ─
         composable(Screen.Home.route) {
             HomeScreen(
                 authViewModel = authViewModel,
@@ -45,7 +44,6 @@ fun BistaiNavGraph(
             )
         }
 
-        // ── Auth: Opsiyonel Login Ekranı (Bulut Yedekleme için) ───────────
         composable(Screen.Login.route) {
             LoginScreen(
                 authViewModel = authViewModel,
@@ -58,7 +56,6 @@ fun BistaiNavGraph(
             )
         }
 
-        // ── Hisse Detay (pager dışında, tam ekran) ────────────────────────
         composable(
             route = Screen.StockDetail.route,
             arguments = listOf(navArgument("symbol") { type = NavType.StringType })
@@ -71,8 +68,6 @@ fun BistaiNavGraph(
         }
     }
 }
-
-// ─── Ana Sekmeler (HorizontalPager) ──────────────────────────────────────────
 
 @Composable
 private fun HomeScreen(
@@ -100,7 +95,7 @@ private fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            beyondViewportPageCount = 1   // yan sayfaları bellekte tut, geçiş pürüzsüz olsun
+            beyondViewportPageCount = 1
         ) { page ->
             when (tabs[page]) {
                 BottomNavItem.PORTFOLIO -> PortfolioScreen(onStockClick = onStockClick)
@@ -114,8 +109,6 @@ private fun HomeScreen(
         }
     }
 }
-
-// ─── Bottom Navigation Bar ───────────────────────────────────────────────────
 
 @Composable
 private fun BistaiBottomBar(

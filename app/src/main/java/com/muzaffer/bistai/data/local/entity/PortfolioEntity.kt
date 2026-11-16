@@ -4,10 +4,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.muzaffer.bistai.domain.model.PortfolioItem
 
-/**
- * Kullanıcının yerel portföy hisselerini saklayan Room entity'si.
- * Misafir modunda doğrudan burada tutulur; giriş yapılınca buluta yedeklenebilir.
- */
 @Entity(tableName = "portfolio")
 data class PortfolioEntity(
     @PrimaryKey val symbol: String,

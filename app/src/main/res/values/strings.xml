@@ -1,5 +1,4 @@
 <resources>
     <string name="app_name">BISTAI</string>
-    <!-- Firebase Authentication için kullanılacak olan Web Client ID (Google Cloud Console'dan alınır) -->
     <string name="default_web_client_id">35415510791-347bjsrtmhhkua1r5d9fk98r6skfkcdv.apps.googleusercontent.com</string>
 </resources>

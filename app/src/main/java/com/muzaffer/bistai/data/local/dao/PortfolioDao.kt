@@ -7,9 +7,6 @@ import androidx.room.Query
 import com.muzaffer.bistai.data.local.entity.PortfolioEntity
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Yerel portföy verileri için Room DAO arayüzü.
- */
 @Dao
 interface PortfolioDao {
     @Query("SELECT * FROM portfolio ORDER BY addedAt DESC")
@@ -26,4 +23,10 @@ interface PortfolioDao {
 
     @Query("DELETE FROM portfolio WHERE symbol = :symbol")
     suspend fun deletePortfolioItem(symbol: String)
+
+    @Query("DELETE FROM portfolio WHERE symbol NOT IN (:symbols)")
+    suspend fun deleteItemsNotIn(symbols: List<String>)
+
+    @Query("DELETE FROM portfolio")
+    suspend fun clearAll()
 }

@@ -2,31 +2,29 @@ package com.muzaffer.bistai.presentation.portfolio
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.muzaffer.bistai.domain.model.Stock
-import com.muzaffer.bistai.domain.repository.WatchlistRepository
-import com.muzaffer.bistai.domain.usecase.GetStocksUseCase
 import com.muzaffer.bistai.core.Resource
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import javax.inject.Inject
-
 import com.muzaffer.bistai.domain.model.PortfolioItem
 import com.muzaffer.bistai.domain.model.PortfolioQuickAction
+import com.muzaffer.bistai.domain.model.Stock
 import com.muzaffer.bistai.domain.repository.AnalysisRepository
 import com.muzaffer.bistai.domain.repository.AuthRepository
 import com.muzaffer.bistai.domain.repository.NewsRepository
 import com.muzaffer.bistai.domain.repository.PortfolioRepository
+import com.muzaffer.bistai.domain.repository.WatchlistRepository
+import com.muzaffer.bistai.domain.usecase.GetStocksUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-
-// ─── UI State ────────────────────────────────────────────────────────────────
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class PortfolioUiState(
     val stocks: List<Stock>                    = emptyList(),
     val isLoading: Boolean                     = false,
     val errorMessage: String?                  = null,
     val favoriteSymbols: Set<String>           = emptySet(),
-    val portfolioItems: List<PortfolioItem>    = emptyList(), // Kullanıcının cüzdanı
+    val portfolioItems: List<PortfolioItem>    = emptyList(),
     val isAuthenticated: Boolean               = false,
     val selectedQuickAction: PortfolioQuickAction? = null,
     val isQuickActionSheetVisible: Boolean     = false,
@@ -36,30 +34,25 @@ data class PortfolioUiState(
 ) {
     val hasError: Boolean get() = errorMessage != null
     val isEmpty: Boolean  get() = !isLoading && stocks.isEmpty() && !hasError
-    
-    // Toplam Yatırım (Maliyet * Lot)
+
     val totalInvestment: Double
         get() = portfolioItems.sumOf { it.totalInvestment }
-        
-    // Güncel Varlık Değeri (Anlık Fiyat * Lot)
+
     val currentTotalValue: Double
         get() = portfolioItems.sumOf { item ->
             val stock = stocks.find { it.symbol == item.symbol }
             val currentPrice = stock?.currentPrice ?: item.averageCost
             currentPrice * item.lotSize
         }
-        
-    // Toplam Kâr / Zarar
+
     val totalProfitLoss: Double
         get() = currentTotalValue - totalInvestment
-    
-    // Yüzdelik Kâr / Zarar
+
     val totalProfitLossPercentage: Double
         get() = if (totalInvestment > 0) (totalProfitLoss / totalInvestment) * 100 else 0.0
 }
 
-// ─── ViewModel ───────────────────────────────────────────────────────────────
-
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class PortfolioViewModel @Inject constructor(
     private val getStocksUseCase: GetStocksUseCase,
@@ -81,7 +74,6 @@ class PortfolioViewModel @Inject constructor(
         observeAuthAndPortfolio()
     }
 
-    /** Hisse listesini yükler. */
     fun loadStocks() {
         viewModelScope.launch {
             getStocksUseCase()
@@ -108,7 +100,6 @@ class PortfolioViewModel @Inject constructor(
         }
     }
 
-    /** Favori semboller Flow'unu dinler, state'i günceller. */
     private fun observeFavorites() {
         viewModelScope.launch {
             watchlistRepository.getAllFavorites().collect { list ->
@@ -117,27 +108,19 @@ class PortfolioViewModel @Inject constructor(
         }
     }
 
-    /** Kullanıcı girişini ve yerel/bulut cüzdanını dinler. Misafir modunda yerel Room verisini kullanır. */
     private fun observeAuthAndPortfolio() {
         viewModelScope.launch {
-            authRepository.getAuthState().collectLatest { user ->
-                _uiState.update { it.copy(isAuthenticated = user != null) }
-
-                if (user != null) {
-                    portfolioRepository.syncLocalToCloud(user.uid)
-                    portfolioRepository.getPortfolio(user.uid).collect { items ->
-                        _uiState.update { it.copy(portfolioItems = items) }
-                    }
-                } else {
-                    portfolioRepository.getPortfolio(null).collect { items ->
-                        _uiState.update { it.copy(portfolioItems = items) }
-                    }
+            authRepository.getAuthState()
+                .flatMapLatest { user ->
+                    _uiState.update { it.copy(isAuthenticated = user != null) }
+                    portfolioRepository.getPortfolio(user?.uid)
                 }
-            }
+                .collect { items ->
+                    _uiState.update { it.copy(portfolioItems = items) }
+                }
         }
     }
 
-    /** Hisseyi favoriye ekle / çıkar. */
     fun toggleFavorite(symbol: String, name: String) {
         viewModelScope.launch {
             watchlistRepository.toggleFavorite(symbol, name)

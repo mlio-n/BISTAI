@@ -1,8 +1,12 @@
 package com.muzaffer.bistai.di
 
 import com.muzaffer.bistai.data.repository.AnalysisRepositoryImpl
+import com.muzaffer.bistai.data.repository.AuthRepositoryImpl
+import com.muzaffer.bistai.data.repository.PortfolioRepositoryImpl
 import com.muzaffer.bistai.data.repository.StockRepositoryImpl
 import com.muzaffer.bistai.domain.repository.AnalysisRepository
+import com.muzaffer.bistai.domain.repository.AuthRepository
+import com.muzaffer.bistai.domain.repository.PortfolioRepository
 import com.muzaffer.bistai.domain.repository.StockRepository
 import dagger.Binds
 import dagger.Module
@@ -10,12 +14,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-/**
- * Hilt modülü — domain katmanındaki abstraction'ları
- * data katmanındaki somut implementasyonlara bağlar.
- *
- * [Binds] kullanıldığı için sınıf abstract olmalıdır.
- */
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
@@ -35,12 +33,12 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAuthRepository(
-        impl: com.muzaffer.bistai.data.repository.AuthRepositoryImpl
-    ): com.muzaffer.bistai.domain.repository.AuthRepository
+        impl: AuthRepositoryImpl
+    ): AuthRepository
 
     @Binds
     @Singleton
     abstract fun bindPortfolioRepository(
-        impl: com.muzaffer.bistai.data.repository.PortfolioRepositoryImpl
-    ): com.muzaffer.bistai.domain.repository.PortfolioRepository
+        impl: PortfolioRepositoryImpl
+    ): PortfolioRepository
 }
