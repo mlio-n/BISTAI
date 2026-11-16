@@ -19,7 +19,7 @@
 | Özellik | Açıklama |
 |---|---|
 | 📈 **Canlı Fiyatlar** | Yahoo Finance API ile gerçek zamanlı BIST hisse verileri |
-| 🤖 **Medyum AI** | Google Gemini Flash ile haber + makro bağlam destekli tahmin analizi |
+| 🤖 **BISTAI Analiz** | Google Gemini Flash ile haber + makro bağlam destekli tahmin analizi |
 | 🔥 **Merkezi Analiz Önbelleği** | Cloud Firestore (24 saat TTL) + Room yerel yedek önbelleği |
 | 📰 **Türkçe Ekonomi Haberleri** | TRT Haber Ekonomi RSS (`XmlPullParser`) ile güncel haber akışı |
 | 💼 **Portföy & Google Girişi** | Firebase Auth (Credential Manager) ve Cloud Firestore ile kişisel portföy takibi |

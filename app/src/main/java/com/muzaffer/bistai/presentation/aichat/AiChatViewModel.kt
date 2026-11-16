@@ -64,7 +64,7 @@ class AiChatViewModel @Inject constructor(
                 it.copy(
                     messages = listOf(
                         ChatMessage(
-                            text = "Merhaba! Ben **BISTAI**, senin kişisel borsa danışmanın. BIST hisseleri, piyasa analizi veya yatırım stratejileri hakkında her soruyu yanıtlamaya hazırım!",
+                            text = "Sayın Yatırımcı, ben **BISTAI**. Borsa İstanbul (BİST) ve Türkiye piyasalarına dair hisse analizleri, sektör değerlendirmeleri ve risk özetleri için hazırım.",
                             isFromUser = false
                         )
                     ),

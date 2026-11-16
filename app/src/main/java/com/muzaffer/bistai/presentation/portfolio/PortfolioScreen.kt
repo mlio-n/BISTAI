@@ -5,11 +5,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Refresh
@@ -30,7 +32,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.muzaffer.bistai.domain.model.PortfolioQuickAction
 import com.muzaffer.bistai.domain.model.Stock
+import com.muzaffer.bistai.presentation.components.AiQuickActionBottomSheet
 import com.muzaffer.bistai.presentation.components.ShimmerStockCard
 import com.muzaffer.bistai.presentation.theme.*
 
@@ -66,8 +70,49 @@ fun PortfolioScreen(
                 onQueryChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
+                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp)
             )
+
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(PortfolioQuickAction.entries) { action ->
+                    val isSelected = uiState.selectedQuickAction == action && uiState.isQuickActionSheetVisible
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { viewModel.executeQuickAction(action) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = action.label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = NavyBlueSurface,
+                            labelColor = LightSlate,
+                            iconColor = BullishGreen,
+                            selectedContainerColor = BullishGreen.copy(alpha = 0.18f),
+                            selectedLabelColor = BullishGreen,
+                            selectedLeadingIconColor = BullishGreen
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isSelected,
+                            borderColor = NavyBlueMedium,
+                            selectedBorderColor = BullishGreen.copy(alpha = 0.6f)
+                        )
+                    )
+                }
+            }
 
             // ── İçerik ──────────────────────────────────────────────────
             Box(modifier = Modifier.fillMaxSize()) {
@@ -90,6 +135,20 @@ fun PortfolioScreen(
                 }
             }
         }
+    }
+
+    if (uiState.isQuickActionSheetVisible) {
+        AiQuickActionBottomSheet(
+            title = uiState.selectedQuickAction?.label ?: "Portföy Analizi",
+            subtitle = "Portföy & Piyasa • BISTAI Analitik Rapor",
+            isLoading = uiState.isQuickActionLoading,
+            markdownResult = uiState.quickActionResult,
+            errorMessage = uiState.quickActionError,
+            onRetry = {
+                uiState.selectedQuickAction?.let { viewModel.executeQuickAction(it) }
+            },
+            onDismiss = { viewModel.dismissQuickActionSheet() }
+        )
     }
 }
 

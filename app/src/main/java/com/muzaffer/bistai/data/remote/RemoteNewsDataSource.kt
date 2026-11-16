@@ -86,6 +86,6 @@ class RemoteNewsDataSource @Inject constructor() {
     /** Güncel makro ekonomik bağlam. Şimdilik sabit ama ileride buraya TCMB vs. apileri de bağlanabilir */
     fun getMacroContext(): String = """
         Bu haberler gerçek zamanlı TRT Finans/Ekonomi RSS servisinden alınmıştır.
-        Yapay zeka (Medyum AI) bu son dakika haberlerini hesaba katarak analiz yapmalıdır.
+        Yapay zeka (BISTAI) bu son dakika haberlerini hesaba katarak analiz yapmalıdır.
     """.trimIndent()
 }

@@ -2,6 +2,10 @@ package com.muzaffer.bistai.domain.repository
 
 import com.muzaffer.bistai.domain.model.AiPrediction
 import com.muzaffer.bistai.domain.model.NewsItem
+import com.muzaffer.bistai.domain.model.PortfolioItem
+import com.muzaffer.bistai.domain.model.PortfolioQuickAction
+import com.muzaffer.bistai.domain.model.Stock
+import com.muzaffer.bistai.domain.model.StockQuickAction
 
 enum class AnalysisSource { FIREBASE, LOCAL_CACHE, FRESH_API }
 
@@ -21,5 +25,23 @@ interface AnalysisRepository {
         newsItems: List<NewsItem>,
         macroContext: String
     ): Result<AnalysisResult>
+
+    suspend fun runStockQuickAction(
+        action: StockQuickAction,
+        symbol: String,
+        stock: Stock?,
+        portfolioItem: PortfolioItem?,
+        newsItems: List<NewsItem>,
+        macroContext: String,
+        prediction: AiPrediction?
+    ): Result<String>
+
+    suspend fun runPortfolioQuickAction(
+        action: PortfolioQuickAction,
+        portfolioItems: List<PortfolioItem>,
+        stocks: List<Stock>,
+        newsItems: List<NewsItem>,
+        macroContext: String
+    ): Result<String>
 }
 

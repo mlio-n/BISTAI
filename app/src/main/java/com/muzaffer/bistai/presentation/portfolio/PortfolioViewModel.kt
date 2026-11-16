@@ -12,18 +12,27 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 import com.muzaffer.bistai.domain.model.PortfolioItem
+import com.muzaffer.bistai.domain.model.PortfolioQuickAction
+import com.muzaffer.bistai.domain.repository.AnalysisRepository
 import com.muzaffer.bistai.domain.repository.AuthRepository
+import com.muzaffer.bistai.domain.repository.NewsRepository
 import com.muzaffer.bistai.domain.repository.PortfolioRepository
+import kotlinx.coroutines.Job
 
 // ─── UI State ────────────────────────────────────────────────────────────────
 
 data class PortfolioUiState(
-    val stocks: List<Stock>          = emptyList(),
-    val isLoading: Boolean           = false,
-    val errorMessage: String?        = null,
-    val favoriteSymbols: Set<String> = emptySet(),
-    val portfolioItems: List<PortfolioItem> = emptyList(), // Kullanıcının cüzdanı
-    val isAuthenticated: Boolean     = false
+    val stocks: List<Stock>                    = emptyList(),
+    val isLoading: Boolean                     = false,
+    val errorMessage: String?                  = null,
+    val favoriteSymbols: Set<String>           = emptySet(),
+    val portfolioItems: List<PortfolioItem>    = emptyList(), // Kullanıcının cüzdanı
+    val isAuthenticated: Boolean               = false,
+    val selectedQuickAction: PortfolioQuickAction? = null,
+    val isQuickActionSheetVisible: Boolean     = false,
+    val isQuickActionLoading: Boolean          = false,
+    val quickActionResult: String?             = null,
+    val quickActionError: String?              = null
 ) {
     val hasError: Boolean get() = errorMessage != null
     val isEmpty: Boolean  get() = !isLoading && stocks.isEmpty() && !hasError
@@ -56,11 +65,15 @@ class PortfolioViewModel @Inject constructor(
     private val getStocksUseCase: GetStocksUseCase,
     private val watchlistRepository: WatchlistRepository,
     private val authRepository: AuthRepository,
-    private val portfolioRepository: PortfolioRepository
+    private val portfolioRepository: PortfolioRepository,
+    private val analysisRepository: AnalysisRepository,
+    private val newsRepository: NewsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PortfolioUiState())
     val uiState: StateFlow<PortfolioUiState> = _uiState.asStateFlow()
+
+    private var quickActionJob: Job? = null
 
     init {
         loadStocks()
@@ -129,6 +142,72 @@ class PortfolioViewModel @Inject constructor(
         viewModelScope.launch {
             watchlistRepository.toggleFavorite(symbol, name)
         }
+    }
+
+    fun executeQuickAction(action: PortfolioQuickAction) {
+        quickActionJob?.cancel()
+        _uiState.update {
+            it.copy(
+                selectedQuickAction       = action,
+                isQuickActionSheetVisible = true,
+                isQuickActionLoading      = true,
+                quickActionResult         = null,
+                quickActionError          = null
+            )
+        }
+
+        quickActionJob = viewModelScope.launch {
+            val snapshot = _uiState.value
+            val news = newsRepository.getNewsForAsset("BIST100")
+            val macro = newsRepository.getMacroContext()
+
+            analysisRepository.runPortfolioQuickAction(
+                action         = action,
+                portfolioItems = snapshot.portfolioItems,
+                stocks         = snapshot.stocks,
+                newsItems      = news,
+                macroContext   = macro
+            ).onSuccess { markdown ->
+                _uiState.update {
+                    it.copy(
+                        isQuickActionLoading = false,
+                        quickActionResult    = markdown,
+                        quickActionError     = null
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isQuickActionLoading = false,
+                        quickActionError     = mapAiError(error)
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissQuickActionSheet() {
+        quickActionJob?.cancel()
+        _uiState.update {
+            it.copy(
+                isQuickActionSheetVisible = false,
+                isQuickActionLoading      = false
+            )
+        }
+    }
+
+    private fun mapAiError(error: Throwable): String = when {
+        error.message == "API_KEY_MISSING" ->
+            "API anahtarı tanımlı değil. Menü sekmesinden kendi API anahtarınızı kaydedebilir veya local.properties üzerinden GEMINI_API_KEY tanımlayabilirsiniz."
+        error.message?.startsWith("API_KEY_INVALID") == true ||
+        error.message?.startsWith("API_MODEL_NOT_FOUND") == true ->
+            "${error.message}\n\naistudio.google.com adresinden geçerli bir anahtar alabilirsiniz."
+        error.message?.startsWith("QUOTA_EXCEEDED") == true ->
+            "Günlük kota aşıldı. Lütfen birkaç dakika bekleyin."
+        error.message?.contains("Unable to resolve host") == true ||
+        error.message?.contains("timeout") == true ->
+            "İnternet bağlantısı kurulamadı."
+        else -> error.message ?: "Analiz şu an yapılamıyor."
     }
 
     fun refresh() = loadStocks()

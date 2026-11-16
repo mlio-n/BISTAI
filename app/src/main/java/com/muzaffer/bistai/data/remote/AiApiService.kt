@@ -20,7 +20,7 @@ import javax.inject.Singleton
  * Endpoint: https://generativelanguage.googleapis.com/v1beta/
  * Auth: X-goog-api-key header
  *
- * Medyum AI: Haber + makro bağlam + JSON çıktı formatı ile derinlemesine analiz.
+ * BISTAI: Haber + makro bağlam + JSON çıktı formatı ile derinlemesine analiz.
  */
 @Singleton
 class AiApiService @Inject constructor(
@@ -28,9 +28,15 @@ class AiApiService @Inject constructor(
 ) {
 
     companion object {
-        private const val TAG      = "BISTAI_AI"
-        private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
-        private const val MODEL    = "gemini-flash-latest"   // ← senin curl komutundakiyle aynı
+        private const val TAG         = "BISTAI_AI"
+        private const val BASE_URL    = "https://generativelanguage.googleapis.com/v1beta/models"
+        private const val MODEL       = "gemini-flash-latest"
+        private const val TEMPERATURE = 0.2
+        const val SYSTEM_INSTRUCTION  =
+            "Sen sadece Borsa İstanbul (BİST) ve Türkiye piyasaları üzerine uzmanlaşmış analitik bir borsa asistanısın. " +
+            "Kullanıcıya daima Sayın Yatırımcı diye hitap et. " +
+            "Yanıtlarını asla sohbet uzatmadan, doğrudan Markdown tabloları, madde işaretleri ve kısa risk özetleriyle ver. " +
+            "Finans dışı soruları karakterden çıkmadan profesyonelce reddet."
     }
 
     private val client = OkHttpClient.Builder()
@@ -40,10 +46,10 @@ class AiApiService @Inject constructor(
 
     val isApiKeySet: Boolean get() = apiKeyManager.getEffectiveApiKey().isNotBlank()
 
-    // ─── Medyum AI Analizi ───────────────────────────────────────────────────
+    // ─── BISTAI Analizi ──────────────────────────────────────────────────────
 
     /**
-     * Varlık için Medyum AI analizi üretir.
+     * Varlık için BISTAI analizi üretir.
      * Haber başlıkları + makro bağlam ile zenginleştirilmiş prompt.
      * Çıktı: Yapılandırılmış JSON → AiPrediction
      */
@@ -63,10 +69,9 @@ class AiApiService @Inject constructor(
         }.joinToString("\n")
 
         val prompt = """
-Sen BIST ve global hisse senetleri konusunda son derece deneyimli, detaylara hakim, profesyonel ama hafif agresif/kesin konuşan bir "BISTAI Medyumu" (Baş Analist) rolündesin.
-Amacın, sağlanan haberlerin ve fiyatın ardındaki psikolojik ve teknik etkiyi analiz etmek.
-Eğer veriler veya haberler yetersizse (veya hiç haber yoksa), destekli atmak yerine DÜRÜST OL, "Veri yetersiz, yeterli analiz yapılamıyor" minvalinde bir cevap ver.
-Analiz dışında (örn. yemek tarifi, genel sohbet) hiçbir soruya cevap verme.
+Sen Borsa İstanbul (BİST) ve Türkiye piyasaları konusunda son derece deneyimli, veriye dayalı çalışan analitik BISTAI borsa asistanısın.
+Amacın, sağlanan haberlerin ve fiyatın ardındaki temel ve teknik etkiyi nesnel biçimde analiz etmektir.
+Eğer veriler veya haberler yetersizse (veya hiç haber yoksa) varsayım üretme ve "Veri yetersiz, sağlıklı analiz yapılamıyor" şeklinde belirt.
 
 VARLIK: $symbol${if (currentPrice > 0) " | Güncel Fiyat: $currentPrice" else ""}
 
@@ -77,25 +82,28 @@ MAKRO EKONOMİK DURUM:
 $macroContext
 
 GÖREV:
-Bu verileri bir finans medyumunun keskinliğiyle analiz et ve YALNIZCA aşağıdaki JSON formatında yanıt ver:
+Bu verileri analitik ve nesnel biçimde değerlendir ve YALNIZCA aşağıdaki JSON formatında yanıt ver:
 {
   "trend": "BULLISH",
   "confidence": 72,
   "targetLow": 290.0,
   "targetHigh": 320.0,
-  "reasoning": "Buraya analizi özetleyen, keskin ve profesyonel görüş bildiren 2-3 Türkçe cümle yaz."
+  "reasoning": "Sayın Yatırımcı için fiyat, haber akışı ve kısa risk özetini içeren 2-3 Türkçe analitik cümle."
 }
 
 KURALLAR:
 - trend: sadece BULLISH, BEARISH veya NEUTRAL olabilir
-- confidence: 0-100 arası sayı (kaç % emin olduğun). Veri yetersizse 0 yap.
-- targetLow/targetHigh: gerçekçi fiyat aralığı (0.0 ise bilinmiyor).
-- reasoning: 2-3 cümle. Sadece fiyatı ve haberi yorumla.
-- SADECE JSON döndür, başka hiçbir şey yazma. Markdown falan atma, JSON bloğu at.
+- confidence: 0-100 arası sayı (veri yetersizse 0 yap)
+- targetLow/targetHigh: gerçekçi fiyat aralığı (0.0 ise bilinmiyor)
+- reasoning: Sayın Yatırımcı hitabıyla 2-3 cümle, sadece fiyat/haber ve kısa risk özeti
+- SADECE geçerli JSON döndür, kod bloğu veya başka metin ekleme.
         """.trimIndent()
 
         return try {
-            val result = generateContent(listOf(userMessage(prompt)))
+            val result = generateContent(
+                contents = listOf(userMessage(prompt)),
+                expectJson = true
+            )
             result.map { rawText -> parseAiPrediction(rawText) }
         } catch (e: Exception) {
             Log.e(TAG, "💥 analyzeAsset hatası: ${e.message}", e)
@@ -103,13 +111,21 @@ KURALLAR:
         }
     }
 
-    /** Geriye dönük uyumluluk için eski hisse analizi (sadece metin). */
+    suspend fun generateQuickActionAnalysis(prompt: String): Result<String> {
+        if (!isApiKeySet) {
+            Log.e(TAG, "❌ API Key boş!")
+            return Result.failure(IllegalStateException("API_KEY_MISSING"))
+        }
+        return generateContent(listOf(userMessage(prompt)))
+    }
+
+    /** Geriye dönük uyumluluk için hisse analizi (sadece metin). */
     suspend fun analyzeStock(symbol: String): Result<String> {
         if (!isApiKeySet) return Result.failure(IllegalStateException("API_KEY_MISSING"))
         val prompt = """
-            BIST hisselerini analiz eden bir finans uzmanısın.
-            "$symbol" hissesi için Türkçe, kısa (max 250 kelime) analiz yaz:
-            📊 Teknik Görünüm | 📈 Yatırımcı Özeti | ⚠️ Dikkat Edilmesi Gerekenler
+            "$symbol" hissesi için BIST piyasası odağında Sayın Yatırımcı'ya yönelik analiz hazırla.
+            Markdown tablosu, madde işaretleri ve kısa risk özeti kullan (max 250 kelime):
+            | Başlık | Değerlendirme |
         """.trimIndent()
         return generateContent(listOf(userMessage(prompt)))
     }
@@ -119,39 +135,39 @@ KURALLAR:
     fun startStockChat(symbol: String, prediction: AiPrediction? = null): SimpleChat {
         val predContext = prediction?.let {
             """
-            Not: Bu hisse için AI tahmini: ${it.trend.label} (%${it.confidenceScore} güven)
-            Hedef fiyat: ${it.targetLow} – ${it.targetHigh}
+            Mevcut BISTAI Tahmini: ${it.trend.label} (%${it.confidenceScore} güven)
+            Hedef Aralık: ${it.targetLow} – ${it.targetHigh}
             """.trimIndent()
         } ?: ""
 
         val systemPrompt = """
-            Sen sert, agresif ve iddialı konuşan bir 'BISTAI Baş Analisti'sin. "$symbol" hissesi için en son yapılan AI analizinin detaylarını yorumluyorsun.
+            Odak hisse: "$symbol" (Borsa İstanbul).
             $predContext
             Kurallar:
-            1. Sadece finans ve "$symbol" ile ilgili konularda konuş. Borsa harici hiçbir soruyu cevaplama ("Ben sadece borsa konuşurum" vb. de).
-            2. Kesin, net ve profesyonel (ama hafif kibirli/iddialı) Türkçe yanıt ver (max 150-200 kelime).
-            3. Analizin güven puanına (confidence) göre iddialı konuş (örneğin %50'nin altındaysa "Piyasa şu an belirsiz, rüzgara göre yelken açamam" gibi şeyler söyle).
-            4. Yatırım tavsiyesi olmadığını (SPK kuralları gereği) kibarca hatırlat.
+            1. Sayın Yatırımcı hitabıyla doğrudan konuya gir, gereksiz sohbet uzatma.
+            2. Yanıtları Markdown tabloları, madde işaretleri ve kısa bir "Risk Özeti" bölümüyle sun.
+            3. Borsa İstanbul, Türkiye ekonomisi ve finans dışındaki soruları karakterden çıkmadan profesyonelce reddet.
+            4. Analizlerin SPK kapsamında yatırım tavsiyesi olmadığını kısaca not düş.
         """.trimIndent()
 
         return SimpleChat(
             initialHistory = mutableListOf(
                 userMessage(systemPrompt),
-                modelMessage("Analiz hazır! **$symbol** ile ilgili her sorunuzu yanıtlamaya hazırım.")
+                modelMessage("Sayın Yatırımcı, **$symbol** için analitik veriler hazır. Öğrenmek istediğiniz başlığı paylaşabilirsiniz.")
             )
         )
     }
 
     fun startGeneralChat(): SimpleChat {
         val systemPrompt = """
-            Sen BISTAI adlı Türk finans ve borsa asistanısın.
-            BIST ve global piyasalar hakkında Türkçe, kısa yanıtlar veriyorsun.
-            Yatırım tavsiyesi yerine analiz ve bilgi sunuyorsun.
+            Odak: Borsa İstanbul (BİST) ve Türkiye finansal piyasaları.
+            Yanıtları daima Sayın Yatırımcı hitabıyla; doğrudan Markdown tabloları, madde işaretleri ve kısa risk özetleriyle sun.
+            Finans ve yatırım dışındaki tüm soruları karakterden çıkmadan profesyonelce reddet.
         """.trimIndent()
         return SimpleChat(
             initialHistory = mutableListOf(
                 userMessage(systemPrompt),
-                modelMessage("Merhaba! Ben **BISTAI**, kişisel borsa danışmanın. Sormak istediğin her şeyi yanıtlamaya hazırım!")
+                modelMessage("Sayın Yatırımcı, ben **BISTAI**. Borsa İstanbul ve Türkiye piyasalarına dair analiz, sektör kıyaslaması ve risk değerlendirmeleri için hazırım.")
             )
         )
     }
@@ -165,14 +181,24 @@ KURALLAR:
 
     // ─── REST Core ───────────────────────────────────────────────────────────
 
-    private suspend fun generateContent(contents: List<JSONObject>): Result<String> {
+    private suspend fun generateContent(
+        contents: List<JSONObject>,
+        systemInstruction: String = SYSTEM_INSTRUCTION,
+        expectJson: Boolean = false
+    ): Result<String> {
         val apiKey = apiKeyManager.getEffectiveApiKey()
         val url = "$BASE_URL/$MODEL:generateContent"
         val body = JSONObject().apply {
+            put("systemInstruction", JSONObject().apply {
+                put("parts", JSONArray().put(JSONObject().put("text", systemInstruction)))
+            })
             put("contents", JSONArray(contents))
             put("generationConfig", JSONObject().apply {
                 put("maxOutputTokens", 2048)
-                put("temperature", 0.7)
+                put("temperature", TEMPERATURE)
+                if (expectJson) {
+                    put("responseMimeType", "application/json")
+                }
             })
         }
 

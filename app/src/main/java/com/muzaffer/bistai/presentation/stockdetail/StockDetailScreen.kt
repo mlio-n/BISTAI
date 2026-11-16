@@ -30,7 +30,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.muzaffer.bistai.domain.model.StockQuickAction
 import com.muzaffer.bistai.domain.repository.AnalysisSource
+import com.muzaffer.bistai.presentation.components.AiQuickActionBottomSheet
 import com.muzaffer.bistai.presentation.components.ChatBubble
 import com.muzaffer.bistai.presentation.theme.*
 import kotlinx.coroutines.launch
@@ -74,6 +76,47 @@ fun StockDetailScreen(
 
             // ── Top Bar ────────────────────────────────────────────────────
             TopBar(symbol = symbol, onBack = onBack, onRefresh = { viewModel.fetchAnalysis(symbol) })
+
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(StockQuickAction.entries) { action ->
+                    val isSelected = uiState.selectedQuickAction == action && uiState.isQuickActionSheetVisible
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { viewModel.executeQuickAction(action) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = action.label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = NavyBlueSurface,
+                            labelColor = LightSlate,
+                            iconColor = BullishGreen,
+                            selectedContainerColor = BullishGreen.copy(alpha = 0.18f),
+                            selectedLabelColor = BullishGreen,
+                            selectedLeadingIconColor = BullishGreen
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isSelected,
+                            borderColor = NavyBlueMedium,
+                            selectedBorderColor = BullishGreen.copy(alpha = 0.6f)
+                        )
+                    )
+                }
+            }
 
             // ── Scrollable Content ─────────────────────────────────────────
             LazyColumn(
@@ -220,6 +263,20 @@ fun StockDetailScreen(
                     }
                 }
             }
+        )
+    }
+
+    if (uiState.isQuickActionSheetVisible) {
+        AiQuickActionBottomSheet(
+            title = uiState.selectedQuickAction?.label ?: "Hızlı Analiz",
+            subtitle = "$symbol • BISTAI Analitik Rapor",
+            isLoading = uiState.isQuickActionLoading,
+            markdownResult = uiState.quickActionResult,
+            errorMessage = uiState.quickActionError,
+            onRetry = {
+                uiState.selectedQuickAction?.let { viewModel.executeQuickAction(it) }
+            },
+            onDismiss = { viewModel.dismissQuickActionSheet() }
         )
     }
 }
@@ -394,7 +451,7 @@ fun AiPredictionCard(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = GoldAccent, modifier = Modifier.size(18.dp))
-                    Text("Medyum AI Tahmini", style = MaterialTheme.typography.titleSmall, color = White, fontWeight = FontWeight.Bold)
+                    Text("BISTAI Tahmini", style = MaterialTheme.typography.titleSmall, color = White, fontWeight = FontWeight.Bold)
                 }
                 Surface(shape = RoundedCornerShape(8.dp), color = trendColor.copy(alpha = 0.15f)) {
                     Text(

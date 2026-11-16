@@ -4,33 +4,46 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.muzaffer.bistai.core.Resource
 import com.muzaffer.bistai.data.remote.AiApiService
 import com.muzaffer.bistai.data.remote.SimpleChat
 import com.muzaffer.bistai.domain.model.AiPrediction
+import com.muzaffer.bistai.domain.model.StockQuickAction
 import com.muzaffer.bistai.domain.repository.AnalysisRepository
 import com.muzaffer.bistai.domain.repository.AnalysisSource
 import com.muzaffer.bistai.domain.repository.AuthRepository
 import com.muzaffer.bistai.domain.repository.NewsRepository
 import com.muzaffer.bistai.domain.repository.PortfolioRepository
+import com.muzaffer.bistai.domain.repository.StockRepository
 import com.muzaffer.bistai.presentation.components.ChatMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class StockDetailUiState(
-    val symbol: String                  = "",
-    val isLoading: Boolean              = false,
-    val analysis: String?               = null,
-    val prediction: AiPrediction?       = null,
-    val analysisSource: AnalysisSource? = null,   // 🔥 Firebase / 💾 Yerel / ✨ Taze
-    val analysisAgeMinutes: Long?       = null,   // kaç dakika önce üretildi
-    val errorMessage: String?           = null,
-    val chatMessages: List<ChatMessage> = emptyList(),
-    val isChatLoading: Boolean          = false
+    val symbol: String                        = "",
+    val isLoading: Boolean                    = false,
+    val analysis: String?                     = null,
+    val prediction: AiPrediction?             = null,
+    val analysisSource: AnalysisSource?       = null,   // 🔥 Firebase / 💾 Yerel / ✨ Taze
+    val analysisAgeMinutes: Long?             = null,   // kaç dakika önce üretildi
+    val errorMessage: String?                 = null,
+    val chatMessages: List<ChatMessage>       = emptyList(),
+    val isChatLoading: Boolean                = false,
+    val selectedQuickAction: StockQuickAction? = null,
+    val isQuickActionSheetVisible: Boolean    = false,
+    val isQuickActionLoading: Boolean         = false,
+    val quickActionResult: String?            = null,
+    val quickActionError: String?             = null
 )
 
 @HiltViewModel
@@ -40,6 +53,7 @@ class StockDetailViewModel @Inject constructor(
     private val analysisRepository: AnalysisRepository,   // ← V2.1: Firebase → API → Room
     private val authRepository: AuthRepository,
     private val portfolioRepository: PortfolioRepository,
+    private val stockRepository: StockRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -47,6 +61,7 @@ class StockDetailViewModel @Inject constructor(
     val uiState: StateFlow<StockDetailUiState> = _uiState.asStateFlow()
 
     private var chat: SimpleChat? = null
+    private var quickActionJob: Job? = null
 
     companion object {
         private const val TAG = "BISTAI_VM"
@@ -92,23 +107,99 @@ class StockDetailViewModel @Inject constructor(
                 updateChatGreeting(symbol, isError = false)
                 chat = aiService.startStockChat(symbol, prediction)
             }.onFailure { error ->
-                val msg = when {
-                    error.message == "API_KEY_MISSING" ->
-                        "API anahtarı tanımlı değil. local.properties dosyasına\nGEMINI_API_KEY=... ekleyin."
-                    error.message?.startsWith("API_KEY_INVALID") == true ||
-                    error.message?.startsWith("API_MODEL_NOT_FOUND") == true ->
-                        "${error.message}\n\n💡 aistudio.google.com adresinden yeni key alın."
-                    error.message?.startsWith("QUOTA_EXCEEDED") == true ->
-                        "Günlük kota aşıldı. Birkaç dakika bekleyin."
-                    error.message?.contains("Unable to resolve host") == true ||
-                    error.message?.contains("timeout") == true ->
-                        "İnternet bağlantısı kurulamadı."
-                    else -> error.message ?: "Analiz şu an yapılamıyor."
-                }
+                val msg = mapAiError(error)
                 _uiState.update { it.copy(isLoading = false, errorMessage = msg) }
                 updateChatGreeting(symbol, isError = true)
             }
         }
+    }
+
+    fun executeQuickAction(action: StockQuickAction) {
+        val symbol = _uiState.value.symbol
+        if (symbol.isBlank()) return
+
+        quickActionJob?.cancel()
+        _uiState.update {
+            it.copy(
+                selectedQuickAction       = action,
+                isQuickActionSheetVisible = true,
+                isQuickActionLoading      = true,
+                quickActionResult         = null,
+                quickActionError          = null
+            )
+        }
+
+        quickActionJob = viewModelScope.launch {
+            val uid = authRepository.getCurrentUser()?.uid
+            val (stock, portfolioItem, news) = coroutineScope {
+                val stockDeferred = async {
+                    runCatching {
+                        stockRepository.getStockDetail(symbol)
+                            .filter { it !is Resource.Loading }
+                            .firstOrNull()
+                    }.getOrNull() as? Resource.Success
+                }
+                val portfolioDeferred = async {
+                    runCatching {
+                        portfolioRepository.getPortfolio(uid)
+                            .firstOrNull()
+                            ?.find { it.symbol.equals(symbol, ignoreCase = true) }
+                    }.getOrNull()
+                }
+                val newsDeferred = async { newsRepository.getNewsForAsset(symbol) }
+                Triple(stockDeferred.await()?.data, portfolioDeferred.await(), newsDeferred.await())
+            }
+
+            val macro = newsRepository.getMacroContext()
+            analysisRepository.runStockQuickAction(
+                action        = action,
+                symbol        = symbol,
+                stock         = stock,
+                portfolioItem = portfolioItem,
+                newsItems     = news,
+                macroContext  = macro,
+                prediction    = _uiState.value.prediction
+            ).onSuccess { markdown ->
+                _uiState.update {
+                    it.copy(
+                        isQuickActionLoading = false,
+                        quickActionResult    = markdown,
+                        quickActionError     = null
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isQuickActionLoading = false,
+                        quickActionError     = mapAiError(error)
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissQuickActionSheet() {
+        quickActionJob?.cancel()
+        _uiState.update {
+            it.copy(
+                isQuickActionSheetVisible = false,
+                isQuickActionLoading      = false
+            )
+        }
+    }
+
+    private fun mapAiError(error: Throwable): String = when {
+        error.message == "API_KEY_MISSING" ->
+            "API anahtarı tanımlı değil. Menü sekmesinden kendi API anahtarınızı kaydedebilir veya local.properties üzerinden GEMINI_API_KEY tanımlayabilirsiniz."
+        error.message?.startsWith("API_KEY_INVALID") == true ||
+        error.message?.startsWith("API_MODEL_NOT_FOUND") == true ->
+            "${error.message}\n\naistudio.google.com adresinden geçerli bir anahtar alabilirsiniz."
+        error.message?.startsWith("QUOTA_EXCEEDED") == true ->
+            "Günlük kota aşıldı. Lütfen birkaç dakika bekleyin."
+        error.message?.contains("Unable to resolve host") == true ||
+        error.message?.contains("timeout") == true ->
+            "İnternet bağlantısı kurulamadı."
+        else -> error.message ?: "Analiz şu an yapılamıyor."
     }
 
     private fun initChat(symbol: String) {
