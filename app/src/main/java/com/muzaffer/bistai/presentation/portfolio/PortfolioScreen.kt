@@ -45,6 +45,7 @@ import com.muzaffer.bistai.domain.model.Stock
 import com.muzaffer.bistai.presentation.components.AiQuickActionBottomSheet
 import com.muzaffer.bistai.presentation.components.ShimmerStockCard
 import com.muzaffer.bistai.presentation.stockdetail.BezierLineChartCanvas
+import com.muzaffer.bistai.presentation.stockdetail.PlaceholderChartCanvas
 import com.muzaffer.bistai.presentation.stockdetail.formatChartTimestamp
 import com.muzaffer.bistai.presentation.theme.TrendDown
 import com.muzaffer.bistai.presentation.theme.TrendUp
@@ -161,8 +162,9 @@ fun PortfolioScreen(
                         item {
                             Spacer(modifier = Modifier.height(12.dp))
                             HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                thickness = 0.5.dp
+                                color = MaterialTheme.colorScheme.outline,
+                                thickness = 0.5.dp,
+                                modifier = Modifier.padding(horizontal = 20.dp)
                             )
                             Row(
                                 modifier = Modifier
@@ -198,8 +200,9 @@ fun PortfolioScreen(
                                 )
                             }
                             HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                thickness = 0.5.dp
+                                color = MaterialTheme.colorScheme.outline,
+                                thickness = 0.5.dp,
+                                modifier = Modifier.padding(horizontal = 20.dp)
                             )
                         }
 
@@ -232,7 +235,7 @@ fun PortfolioScreen(
                                     onLongClick = { handleFavoriteToggle(stock.symbol, stock.name) }
                                 )
                                 HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                    color = MaterialTheme.colorScheme.outline,
                                     thickness = 0.5.dp,
                                     modifier = Modifier.padding(horizontal = 20.dp)
                                 )
@@ -242,8 +245,9 @@ fun PortfolioScreen(
                         item {
                             Spacer(modifier = Modifier.height(16.dp))
                             HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                thickness = 0.5.dp
+                                color = MaterialTheme.colorScheme.outline,
+                                thickness = 0.5.dp,
+                                modifier = Modifier.padding(horizontal = 20.dp)
                             )
                             Row(
                                 modifier = Modifier
@@ -254,7 +258,7 @@ fun PortfolioScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Hisse Ekle / Tüm Piyasalar",
+                                    text = "Tüm Piyasalar",
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onBackground,
                                     fontWeight = FontWeight.SemiBold
@@ -276,8 +280,9 @@ fun PortfolioScreen(
                                 }
                             }
                             HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                thickness = 0.5.dp
+                                color = MaterialTheme.colorScheme.outline,
+                                thickness = 0.5.dp,
+                                modifier = Modifier.padding(horizontal = 20.dp)
                             )
                         }
                     }
@@ -376,20 +381,33 @@ private fun PortfolioBalanceAndChartSection(
                     fontWeight = FontWeight.Bold
                 )
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "${profitLoss.formatTrCurrency(includeSign = true)}  (${profitLossPercentage.formatTrPercent()})",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (profitLoss >= 0.0) TrendUp else TrendDown,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    if (totalInvestment > 0.0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(
-                            text = "•  Maliyet ${totalInvestment.formatTrCurrency()}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "${profitLoss.formatTrCurrency(includeSign = true)}  ${profitLossPercentage.formatTrPercent()}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (profitLoss >= 0.0) TrendUp else TrendDown,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (totalInvestment > 0.0) {
+                            Text(
+                                text = "•  Maliyet ${totalInvestment.formatTrCurrency()}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (isChartLoading) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            strokeWidth = 1.5.dp,
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                 }
@@ -402,30 +420,16 @@ private fun PortfolioBalanceAndChartSection(
                 .height(170.dp),
             contentAlignment = Alignment.Center
         ) {
-            when {
-                isChartLoading && chartData == null -> {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.primary,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-                chartData != null && chartData.points.size >= 2 -> {
-                    BezierLineChartCanvas(
-                        chartData = chartData,
-                        trendColor = trendColor,
-                        selectedPointIndex = selectedPointIndex,
-                        onPointSelected = { selectedPointIndex = it },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-                else -> {
-                    Text(
-                        text = "Grafik verisi bekleniyor",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            if (chartData != null && chartData.points.size >= 2) {
+                BezierLineChartCanvas(
+                    chartData = chartData,
+                    trendColor = trendColor,
+                    selectedPointIndex = selectedPointIndex,
+                    onPointSelected = { selectedPointIndex = it },
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                PlaceholderChartCanvas(modifier = Modifier.fillMaxSize())
             }
         }
 
@@ -568,26 +572,35 @@ private fun MarketStocksBottomSheet(
                 .fillMaxHeight(0.85f)
                 .navigationBarsPadding()
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 20.dp, vertical = 4.dp)
             ) {
-                Text(
-                    text = "Tüm Piyasalar",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Kapat",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Tüm Piyasalar",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
                     )
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Kapat",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
+                Text(
+                    text = "Portföyünüze eklemek veya analiz için hisse seçin",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             OutlinedTextField(
@@ -636,8 +649,9 @@ private fun MarketStocksBottomSheet(
             )
 
             HorizontalDivider(
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                thickness = 0.5.dp
+                color = MaterialTheme.colorScheme.outline,
+                thickness = 0.5.dp,
+                modifier = Modifier.padding(horizontal = 20.dp)
             )
 
             LazyColumn(
@@ -653,7 +667,7 @@ private fun MarketStocksBottomSheet(
                         onLongClick = { onStockLongClick(stock.symbol, stock.name) }
                     )
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.outline,
                         thickness = 0.5.dp,
                         modifier = Modifier.padding(horizontal = 20.dp)
                     )

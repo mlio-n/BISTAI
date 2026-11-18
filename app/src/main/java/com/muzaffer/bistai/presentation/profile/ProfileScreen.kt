@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.muzaffer.bistai.R
 import com.muzaffer.bistai.domain.model.AppThemeMode
 import com.muzaffer.bistai.presentation.auth.AuthViewModel
+import com.muzaffer.bistai.presentation.theme.LocalBistaiPalette
 import com.muzaffer.bistai.presentation.theme.TrendDown
 
 @Composable
@@ -198,21 +199,21 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        HorizontalDivider(
-                            modifier = Modifier.weight(1f),
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                            thickness = 0.5.dp
-                        )
-                        Text(
-                            text = "veya",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.weight(1f),
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                            thickness = 0.5.dp
-                        )
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.outline,
+                        thickness = 0.5.dp
+                    )
+                    Text(
+                        text = "veya",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.outline,
+                        thickness = 0.5.dp
+                    )
                     }
 
                     OutlinedButton(
@@ -291,34 +292,45 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.outline,
                         thickness = 0.5.dp
                     )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = activeUser.displayName?.takeIf { it.isNotBlank() } ?: activeUser.email ?: "Kullanıcı",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        activeUser.email?.takeIf { !activeUser.displayName.isNullOrBlank() && it.isNotBlank() }?.let { email ->
+                            Text(
+                                text = email,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline,
+                        thickness = 0.5.dp
+                    )
+                    val backupDetails = if (uiState.favoritesCount > 0) {
+                        "$syncAgeText · ${uiState.portfolioCount} hisse, ${uiState.favoritesCount} favori"
+                    } else {
+                        "$syncAgeText · ${uiState.portfolioCount} hisse"
+                    }
                     SettingsRow(
-                        label = activeUser.displayName?.takeIf { it.isNotBlank() } ?: activeUser.email ?: "Kullanıcı",
-                        value = activeUser.email?.takeIf { !activeUser.displayName.isNullOrBlank() } ?: "",
+                        label = "Yedekleme",
+                        value = backupDetails,
                         showChevron = false
                     )
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                        thickness = 0.5.dp
-                    )
-                    SettingsRow(
-                        label = "Yedekleme Durumu",
-                        value = "Son yedek: $syncAgeText",
-                        showChevron = false
-                    )
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                        thickness = 0.5.dp
-                    )
-                    SettingsRow(
-                        label = "Veriler",
-                        value = "${uiState.portfolioCount} hisse, ${uiState.favoritesCount} favori yedeklendi",
-                        showChevron = false
-                    )
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.outline,
                         thickness = 0.5.dp
                     )
                 }
@@ -335,7 +347,7 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.outline,
                         thickness = 0.5.dp
                     )
                     SettingsRow(
@@ -348,7 +360,7 @@ fun ProfileScreen(
                         }
                     )
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.outline,
                         thickness = 0.5.dp
                     )
                 }
@@ -388,16 +400,17 @@ private fun ThemeSelectorSection(
     selectedMode: AppThemeMode,
     onSelectMode: (AppThemeMode) -> Unit
 ) {
+    val palette = LocalBistaiPalette.current
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = "GÖRÜNÜM",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = palette.textSecondary
         )
         Surface(
             shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
+            color = palette.surface1,
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -408,29 +421,29 @@ private fun ThemeSelectorSection(
             ) {
                 AppThemeMode.entries.forEach { mode ->
                     val isSelected = selectedMode == mode
-                    Box(
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSelected) palette.selectedPill else Color.Transparent,
+                        shadowElevation = if (isSelected && !palette.isDark) 1.5.dp else 0.dp,
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                if (isSelected) MaterialTheme.colorScheme.primary
-                                else Color.Transparent
-                            )
                             .clickable { onSelectMode(mode) }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = mode.label,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            maxLines = 1
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = mode.label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                                color = if (isSelected) palette.textPrimary else palette.textSecondary,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }

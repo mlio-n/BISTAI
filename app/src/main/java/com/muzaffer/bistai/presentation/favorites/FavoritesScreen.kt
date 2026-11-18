@@ -123,7 +123,7 @@ fun FavoritesScreen(
                                 }
                             )
                             HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                color = MaterialTheme.colorScheme.outline,
                                 thickness = 0.5.dp,
                                 modifier = Modifier.padding(horizontal = 20.dp)
                             )

@@ -1,6 +1,7 @@
 package com.muzaffer.bistai.presentation.stockdetail
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -207,7 +208,7 @@ fun StockDetailScreen(
                         item {
                             Spacer(modifier = Modifier.height(4.dp))
                             HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                color = MaterialTheme.colorScheme.outline,
                                 thickness = 0.5.dp
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -373,7 +374,7 @@ fun StockChartCard(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "${deltaFromStart.formatTrCurrency(includeSign = true)} (${deltaPercent.formatTrPercent()})",
+                            text = "${deltaFromStart.formatTrCurrency(includeSign = true)}  ${deltaPercent.formatTrPercent()}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = badgeColor,
                             fontWeight = FontWeight.SemiBold
@@ -420,18 +421,11 @@ fun StockChartCard(
 
         when {
             isLoading && chartData == null -> {
-                Box(
+                PlaceholderChartCanvas(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.primary,
-                        strokeWidth = 2.5.dp,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
+                        .height(180.dp)
+                )
             }
 
             errorMessage != null && chartData == null -> {
@@ -489,18 +483,11 @@ fun StockChartCard(
             }
 
             else -> {
-                Box(
+                PlaceholderChartCanvas(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(140.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Bu zaman aralığı için yeterli veri yok",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                        .height(140.dp)
+                )
             }
         }
 
@@ -535,6 +522,33 @@ fun StockChartCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun PlaceholderChartCanvas(modifier: Modifier = Modifier) {
+    val lineColor = MaterialTheme.colorScheme.outline
+    val infiniteTransition = rememberInfiniteTransition(label = "chart_placeholder")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.45f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "chart_pulse"
+    )
+
+    Canvas(modifier = modifier) {
+        val midY = size.height * 0.55f
+        drawLine(
+            color = lineColor.copy(alpha = pulseAlpha),
+            start = Offset(0f, midY),
+            end = Offset(size.width, midY),
+            strokeWidth = 2.dp.toPx(),
+            cap = StrokeCap.Round,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+        )
     }
 }
 

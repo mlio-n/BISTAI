@@ -7,6 +7,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
@@ -16,45 +17,45 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 
 private val BistaiDarkColors = darkColorScheme(
-    primary = PureWhite,
-    onPrimary = PureBlack,
-    primaryContainer = DarkSurfaceVariant,
-    onPrimaryContainer = PureWhite,
-    secondary = PureWhite,
-    onSecondary = PureBlack,
-    secondaryContainer = DarkSurfaceVariant,
-    onSecondaryContainer = PureWhite,
-    background = PureBlack,
-    onBackground = PureWhite,
-    surface = DarkSurface,
-    onSurface = PureWhite,
-    surfaceVariant = DarkSurfaceVariant,
-    onSurfaceVariant = DarkSecondaryText,
-    outline = DarkOutline,
-    outlineVariant = DarkOutline,
-    error = TrendDown,
-    onError = PureWhite
+    primary = DarkTextPrimary,
+    onPrimary = DarkBg,
+    primaryContainer = DarkSurface2,
+    onPrimaryContainer = DarkTextPrimary,
+    secondary = DarkTextPrimary,
+    onSecondary = DarkBg,
+    secondaryContainer = DarkSurface2,
+    onSecondaryContainer = DarkTextPrimary,
+    background = DarkBg,
+    onBackground = DarkTextPrimary,
+    surface = DarkSurface1,
+    onSurface = DarkTextPrimary,
+    surfaceVariant = DarkSurface2,
+    onSurfaceVariant = DarkTextSecondary,
+    outline = DarkDivider,
+    outlineVariant = DarkDivider,
+    error = DarkNegative,
+    onError = DarkBg
 )
 
 private val BistaiLightColors = lightColorScheme(
-    primary = PureBlack,
-    onPrimary = PureWhite,
-    primaryContainer = LightSurfaceVariant,
-    onPrimaryContainer = PureBlack,
-    secondary = PureBlack,
-    onSecondary = PureWhite,
-    secondaryContainer = LightSurfaceVariant,
-    onSecondaryContainer = PureBlack,
-    background = PureWhite,
-    onBackground = PureBlack,
-    surface = LightSurface,
-    onSurface = PureBlack,
-    surfaceVariant = LightSurfaceVariant,
-    onSurfaceVariant = LightSecondaryText,
-    outline = LightOutline,
-    outlineVariant = LightOutline,
-    error = TrendDown,
-    onError = PureWhite
+    primary = LightTextPrimary,
+    onPrimary = LightBg,
+    primaryContainer = LightSurface2,
+    onPrimaryContainer = LightTextPrimary,
+    secondary = LightTextPrimary,
+    onSecondary = LightBg,
+    secondaryContainer = LightSurface2,
+    onSecondaryContainer = LightTextPrimary,
+    background = LightBg,
+    onBackground = LightTextPrimary,
+    surface = LightSurface1,
+    onSurface = LightTextPrimary,
+    surfaceVariant = LightSurface2,
+    onSurfaceVariant = LightTextSecondary,
+    outline = LightDivider,
+    outlineVariant = LightDivider,
+    error = LightNegative,
+    onError = LightBg
 )
 
 val BistaiTypography = Typography(
@@ -166,6 +167,7 @@ fun BISTAITheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) BistaiDarkColors else BistaiLightColors
+    val palette = if (darkTheme) DarkBistaiPalette else LightBistaiPalette
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -177,9 +179,11 @@ fun BISTAITheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = BistaiTypography,
-        content = content
-    )
+    CompositionLocalProvider(LocalBistaiPalette provides palette) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = BistaiTypography,
+            content = content
+        )
+    }
 }

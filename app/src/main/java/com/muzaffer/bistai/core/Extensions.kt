@@ -29,7 +29,7 @@ private val bistCompanyNames = mapOf(
 fun Double.formatTrCurrency(includeSign: Boolean = false): String {
     val formatter = DecimalFormat("#,##0.00", turkishSymbols)
     val prefix = when {
-        this < 0.0 -> "-₺"
+        this < 0.0 -> "−₺"
         includeSign -> "+₺"
         else -> "₺"
     }
@@ -41,7 +41,7 @@ fun Double.formatTrPercent(includeSign: Boolean = true): String {
     val sign = when {
         !includeSign -> ""
         this >= 0.0 -> "+"
-        else -> "-"
+        else -> "−"
     }
     return "$sign%${formatter.format(abs(this))}"
 }
