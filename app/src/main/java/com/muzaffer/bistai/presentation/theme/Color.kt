@@ -14,6 +14,6 @@ val LightSurfaceVariant = Color(0xFFEBEBEB)
 val LightOutline = Color(0xFFD6D6D6)
 val LightSecondaryText = Color(0xFF616161)
 
-val TrendUp = Color(0xFF2E7D32)
-val TrendDown = Color(0xFFC62828)
+val TrendUp = Color(0xFF3DD68C)
+val TrendDown = Color(0xFFFF5C5C)
 val WarningAmber = Color(0xFFD97706)

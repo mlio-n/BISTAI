@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.muzaffer.bistai.core.Resource
+import com.muzaffer.bistai.core.toCleanBistName
 import com.muzaffer.bistai.data.remote.AiApiService
 import com.muzaffer.bistai.data.remote.SimpleChat
 import com.muzaffer.bistai.domain.model.AiPrediction
@@ -18,6 +19,7 @@ import com.muzaffer.bistai.domain.repository.AuthRepository
 import com.muzaffer.bistai.domain.repository.NewsRepository
 import com.muzaffer.bistai.domain.repository.PortfolioRepository
 import com.muzaffer.bistai.domain.repository.StockRepository
+import com.muzaffer.bistai.domain.repository.WatchlistRepository
 import com.muzaffer.bistai.presentation.components.ChatMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -34,6 +36,7 @@ import javax.inject.Inject
 
 data class StockDetailUiState(
     val symbol: String                        = "",
+    val isFavorite: Boolean                   = false,
     val isLoading: Boolean                    = false,
     val analysis: String?                     = null,
     val prediction: AiPrediction?             = null,
@@ -61,6 +64,7 @@ class StockDetailViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val portfolioRepository: PortfolioRepository,
     private val stockRepository: StockRepository,
+    private val watchlistRepository: WatchlistRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -78,8 +82,26 @@ class StockDetailViewModel @Inject constructor(
     init {
         val symbol = savedStateHandle.get<String>("symbol") ?: ""
         _uiState.update { it.copy(symbol = symbol) }
+        observeFavoriteStatus(symbol)
         fetchAnalysis(symbol)
         initChat(symbol)
+    }
+
+    private fun observeFavoriteStatus(symbol: String) {
+        viewModelScope.launch {
+            watchlistRepository.getAllFavorites().collect { favorites ->
+                val isFav = favorites.any { it.symbol.equals(symbol, ignoreCase = true) }
+                _uiState.update { it.copy(isFavorite = isFav) }
+            }
+        }
+    }
+
+    fun toggleFavorite() {
+        val symbol = _uiState.value.symbol
+        if (symbol.isBlank()) return
+        viewModelScope.launch {
+            watchlistRepository.toggleFavorite(symbol, symbol.toCleanBistName())
+        }
     }
 
     fun selectChartRange(range: ChartTimeRange) {
@@ -237,7 +259,7 @@ class StockDetailViewModel @Inject constructor(
 
     private fun mapAiError(error: Throwable): String = when {
         error.message == "API_KEY_MISSING" ->
-            "API anahtarı tanımlı değil. Menü sekmesinden kendi API anahtarınızı kaydedebilir veya local.properties üzerinden GEMINI_API_KEY tanımlayabilirsiniz."
+            "API anahtarı tanımlı değil. Profil sekmesinden kendi API anahtarınızı kaydedebilir veya local.properties üzerinden GEMINI_API_KEY tanımlayabilirsiniz."
         error.message?.startsWith("API_KEY_INVALID") == true ||
         error.message?.startsWith("API_MODEL_NOT_FOUND") == true ->
             "${error.message}\n\naistudio.google.com adresinden geçerli bir anahtar alabilirsiniz."

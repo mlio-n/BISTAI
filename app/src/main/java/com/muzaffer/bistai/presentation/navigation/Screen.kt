@@ -5,9 +5,10 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(val route: String) {
@@ -29,27 +30,27 @@ enum class BottomNavItem(
     val unselectedIcon: ImageVector
 ) {
     PORTFOLIO(
-        screen         = Screen.Portfolio,
-        label          = "Portföy",
-        selectedIcon   = Icons.AutoMirrored.Filled.ShowChart,
+        screen = Screen.Portfolio,
+        label = "Portföy",
+        selectedIcon = Icons.AutoMirrored.Filled.ShowChart,
         unselectedIcon = Icons.AutoMirrored.Outlined.ShowChart
     ),
     FAVORITES(
-        screen         = Screen.Favorites,
-        label          = "Favoriler",
-        selectedIcon   = Icons.Filled.Favorite,
+        screen = Screen.Favorites,
+        label = "Favoriler",
+        selectedIcon = Icons.Filled.Favorite,
         unselectedIcon = Icons.Outlined.FavoriteBorder
     ),
     AI_CHAT(
-        screen         = Screen.AiChat,
-        label          = "BISTAI",
-        selectedIcon   = Icons.Filled.AutoAwesome,
+        screen = Screen.AiChat,
+        label = "Asistan",
+        selectedIcon = Icons.Filled.AutoAwesome,
         unselectedIcon = Icons.Outlined.AutoAwesome
     ),
     PROFILE(
-        screen         = Screen.Profile,
-        label          = "Menü",
-        selectedIcon   = Icons.Rounded.Menu,
-        unselectedIcon = Icons.Rounded.Menu
+        screen = Screen.Profile,
+        label = "Profil",
+        selectedIcon = Icons.Filled.Person,
+        unselectedIcon = Icons.Outlined.Person
     )
 }

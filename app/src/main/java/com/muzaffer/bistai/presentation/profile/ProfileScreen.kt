@@ -2,6 +2,7 @@ package com.muzaffer.bistai.presentation.profile
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,7 +10,12 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,7 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.muzaffer.bistai.R
 import com.muzaffer.bistai.domain.model.AppThemeMode
 import com.muzaffer.bistai.presentation.auth.AuthViewModel
-import com.muzaffer.bistai.presentation.theme.TrendUp
+import com.muzaffer.bistai.presentation.theme.TrendDown
 
 @Composable
 fun ProfileScreen(
@@ -44,8 +50,8 @@ fun ProfileScreen(
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val activeUser = authState.user ?: uiState.user
-    var showApiKey by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
+    var showApiKeySheet by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -62,555 +68,544 @@ fun ProfileScreen(
                     .verticalScroll(rememberScrollState())
                     .statusBarsPadding()
                     .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                Text(
+                    text = "Profil",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold
+                )
+
+                ThemeSelectorSection(
+                    selectedMode = uiState.themeMode,
+                    onSelectMode = viewModel::setThemeMode
+                )
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Text(
+                        text = "HESAP GİRİŞİ",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.emailInput,
+                        onValueChange = viewModel::onEmailInputChange,
+                        enabled = !isAnyAuthLoading,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("E-posta") },
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Default.Email, contentDescription = null)
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Next
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = profileTextFieldColors()
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.passwordInput,
+                        onValueChange = viewModel::onPasswordInputChange,
+                        enabled = !isAnyAuthLoading,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Şifre") },
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Default.Lock, contentDescription = null)
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = { showPassword = !showPassword }) {
+                                Icon(
+                                    imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (showPassword) "Gizle" else "Göster"
+                                )
+                            }
+                        },
+                        singleLine = true,
+                        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                focusManager.clearFocus()
+                                viewModel.signInWithEmail()
+                            }
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = profileTextFieldColors()
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text(
-                            text = "Hesap Girişi",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        OutlinedTextField(
-                            value = uiState.emailInput,
-                            onValueChange = viewModel::onEmailInputChange,
+                        Button(
+                            onClick = {
+                                focusManager.clearFocus()
+                                viewModel.signInWithEmail()
+                            },
                             enabled = !isAnyAuthLoading,
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("E-posta") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Email,
-                                    contentDescription = null
-                                )
-                            },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Email,
-                                imeAction = ImeAction.Next
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
                             ),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = profileTextFieldColors()
-                        )
-
-                        OutlinedTextField(
-                            value = uiState.passwordInput,
-                            onValueChange = viewModel::onPasswordInputChange,
-                            enabled = !isAnyAuthLoading,
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Şifre") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Lock,
-                                    contentDescription = null
-                                )
-                            },
-                            trailingIcon = {
-                                IconButton(onClick = { showPassword = !showPassword }) {
-                                    Icon(
-                                        imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                        contentDescription = if (showPassword) "Gizle" else "Göster"
-                                    )
-                                }
-                            },
-                            singleLine = true,
-                            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Password,
-                                imeAction = ImeAction.Done
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onDone = {
-                                    focusManager.clearFocus()
-                                    viewModel.signInWithEmail()
-                                }
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = profileTextFieldColors()
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Button(
-                                onClick = {
-                                    focusManager.clearFocus()
-                                    viewModel.signInWithEmail()
-                                },
-                                enabled = !isAnyAuthLoading,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                if (uiState.isAuthLoading) {
-                                    CircularProgressIndicator(
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                        strokeWidth = 2.dp,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                } else {
-                                    Text("Giriş Yap", fontWeight = FontWeight.Bold)
-                                }
+                            if (uiState.isAuthLoading) {
+                                CircularProgressIndicator(
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            } else {
+                                Text("Giriş Yap", fontWeight = FontWeight.Bold)
                             }
-
-                            OutlinedButton(
-                                onClick = {
-                                    focusManager.clearFocus()
-                                    viewModel.signUpWithEmail()
-                                },
-                                enabled = !isAnyAuthLoading,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.onSurface
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("Kayıt Ol", fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
-                            Text(
-                                text = "veya",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
                         }
 
                         OutlinedButton(
                             onClick = {
                                 focusManager.clearFocus()
-                                authViewModel.signInWithGoogle(context)
+                                viewModel.signUpWithEmail()
                             },
                             enabled = !isAnyAuthLoading,
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp),
+                                .weight(1f)
+                                .height(48.dp),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                             colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurface
+                                contentColor = MaterialTheme.colorScheme.onBackground
                             ),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            if (authState.isLoading) {
-                                CircularProgressIndicator(
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    strokeWidth = 2.dp,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            } else {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_google_logo_placeholder),
-                                    contentDescription = "Google",
-                                    tint = Color.Unspecified,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = "Google ile Giriş Yap",
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
+                            Text("Kayıt Ol", fontWeight = FontWeight.Bold)
                         }
+                    }
 
-                        combinedError?.let { errorMsg ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            thickness = 0.5.dp
+                        )
+                        Text(
+                            text = "veya",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            thickness = 0.5.dp
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            focusManager.clearFocus()
+                            authViewModel.signInWithGoogle(context)
+                        },
+                        enabled = !isAnyAuthLoading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        if (authState.isLoading) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        } else {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_google_logo_placeholder),
+                                contentDescription = "Google",
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = errorMsg,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                                textAlign = TextAlign.Center
+                                text = "Google ile Giriş Yap",
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
-                }
 
-                ThemeSelectorCard(
-                    selectedMode = uiState.themeMode,
-                    onSelectMode = viewModel::setThemeMode
-                )
+                    combinedError?.let { errorMsg ->
+                        Text(
+                            text = errorMsg,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
             }
         } else {
+            val syncAgeText = remember(uiState.lastSyncedAtMillis) {
+                formatRelativeSyncTime(uiState.lastSyncedAtMillis)
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = "Profil & Ayarlar",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            fontWeight = FontWeight.Black
-                        )
-                        Text(
-                            text = "Bulut Senkronizasyonu Aktif",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = TrendUp
-                        )
-                    }
-                }
-
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                Text(
+                    text = "Profil",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold
                 )
 
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    ThemeSelectorCard(
-                        selectedMode = uiState.themeMode,
-                        onSelectMode = viewModel::setThemeMode
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "HESAP",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        thickness = 0.5.dp
+                    )
+                    SettingsRow(
+                        label = activeUser.displayName?.takeIf { it.isNotBlank() } ?: activeUser.email ?: "Kullanıcı",
+                        value = activeUser.email?.takeIf { !activeUser.displayName.isNullOrBlank() } ?: "",
+                        showChevron = false
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        thickness = 0.5.dp
+                    )
+                    SettingsRow(
+                        label = "Yedekleme Durumu",
+                        value = "Son yedek: $syncAgeText",
+                        showChevron = false
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        thickness = 0.5.dp
+                    )
+                    SettingsRow(
+                        label = "Veriler",
+                        value = "${uiState.portfolioCount} hisse, ${uiState.favoritesCount} favori yedeklendi",
+                        showChevron = false
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        thickness = 0.5.dp
+                    )
+                }
 
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                        modifier = Modifier.fillMaxWidth()
+                ThemeSelectorSection(
+                    selectedMode = uiState.themeMode,
+                    onSelectMode = viewModel::setThemeMode
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "YAPAY ZEKA",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        thickness = 0.5.dp
+                    )
+                    SettingsRow(
+                        label = "Gemini API Anahtarı",
+                        value = if (uiState.isCustomApiKeySaved) "Kayıtlı" else "Ekle",
+                        showChevron = true,
+                        onClick = {
+                            viewModel.clearStatusMessage()
+                            showApiKeySheet = true
+                        }
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        thickness = 0.5.dp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Çıkış Yap",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = TrendDown,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { authViewModel.signOut() }
+                        .padding(vertical = 12.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+
+    if (showApiKeySheet) {
+        ApiKeyBottomSheet(
+            apiKeyInput = uiState.apiKeyInput,
+            isCustomApiKeySaved = uiState.isCustomApiKeySaved,
+            statusMessage = uiState.statusMessage,
+            onApiKeyInputChange = viewModel::onApiKeyInputChange,
+            onSave = viewModel::saveApiKey,
+            onClear = viewModel::clearApiKey,
+            onDismiss = { showApiKeySheet = false }
+        )
+    }
+}
+
+@Composable
+private fun ThemeSelectorSection(
+    selectedMode: AppThemeMode,
+    onSelectMode: (AppThemeMode) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "GÖRÜNÜM",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                AppThemeMode.entries.forEach { mode ->
+                    val isSelected = selectedMode == mode
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else Color.Transparent
+                            )
+                            .clickable { onSelectMode(mode) }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CloudDone,
-                                    contentDescription = null,
-                                    tint = TrendUp
-                                )
-                                Text(
-                                    text = "Bulut Hesabı",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            Text(
-                                text = "Yerel Room veritabanında ${uiState.portfolioCount} portföy hissesi ve ${uiState.favoritesCount} favori hisse kayıtlı.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Text(
-                                        text = activeUser.displayName ?: activeUser.email ?: "Kullanıcı",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    activeUser.email?.let { email ->
-                                        Text(
-                                            text = email,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Button(
-                                    onClick = { viewModel.backupToCloud() },
-                                    enabled = !uiState.isSyncing,
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    if (uiState.isSyncing) {
-                                        CircularProgressIndicator(
-                                            color = MaterialTheme.colorScheme.onPrimary,
-                                            strokeWidth = 2.dp,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    } else {
-                                        Text("Buluta Yedekle", fontWeight = FontWeight.Bold)
-                                    }
-                                }
-
-                                OutlinedButton(
-                                    onClick = { authViewModel.signOut() },
-                                    modifier = Modifier.weight(1f),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Text("Çıkış Yap", fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                        }
+                        Text(
+                            text = mode.label,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            maxLines = 1
+                        )
                     }
-
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Key,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Gemini API Anahtarı",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant
-                                ) {
-                                    Text(
-                                        text = if (uiState.isCustomApiKeySaved) "Şifreli Kayıtlı" else "Varsayılan",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if (uiState.isCustomApiKeySaved) TrendUp else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                    )
-                                }
-                            }
-
-                            Text(
-                                text = "Kendi Google AI Studio anahtarınızı girerseniz yalnızca bu cihazda EncryptedSharedPreferences ile şifreli olarak saklanır.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            OutlinedTextField(
-                                value = uiState.apiKeyInput,
-                                onValueChange = { viewModel.onApiKeyInputChange(it) },
-                                modifier = Modifier.fillMaxWidth(),
-                                label = { Text("Gemini API Anahtarı") },
-                                placeholder = { Text("AIza...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                singleLine = true,
-                                visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
-                                trailingIcon = {
-                                    IconButton(onClick = { showApiKey = !showApiKey }) {
-                                        Icon(
-                                            imageVector = if (showApiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                            contentDescription = if (showApiKey) "Gizle" else "Göster"
-                                        )
-                                    }
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = profileTextFieldColors()
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Button(
-                                    onClick = { viewModel.saveApiKey() },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Text("Anahtarı Kaydet", fontWeight = FontWeight.Bold)
-                                }
-
-                                if (uiState.isCustomApiKeySaved || uiState.apiKeyInput.isNotBlank()) {
-                                    OutlinedButton(
-                                        onClick = { viewModel.clearApiKey() },
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Text("Temizle")
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    uiState.statusMessage?.let { msg ->
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = msg,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(14.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ThemeSelectorCard(
-    selectedMode: AppThemeMode,
-    onSelectMode: (AppThemeMode) -> Unit
+private fun SettingsRow(
+    label: String,
+    value: String,
+    showChevron: Boolean,
+    onClick: (() -> Unit)? = null
 ) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        modifier = Modifier.fillMaxWidth()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (onClick != null) Modifier.clickable { onClick() } else Modifier
+            )
+            .padding(vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Medium
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            if (value.isNotEmpty()) {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (showChevron) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ApiKeyBottomSheet(
+    apiKeyInput: String,
+    isCustomApiKeySaved: Boolean,
+    statusMessage: String?,
+    onApiKeyInputChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onClear: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showApiKey by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.onSurfaceVariant) }
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Contrast,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(20.dp)
-                )
                 Text(
-                    text = "Görünüm Teması",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "Gemini API Anahtarı",
+                    style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
-            }
-
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                AppThemeMode.entries.forEach { mode ->
-                    val isSelected = selectedMode == mode
-                    val modeIcon = when (mode) {
-                        AppThemeMode.LIGHT -> Icons.Default.LightMode
-                        AppThemeMode.DARK -> Icons.Default.DarkMode
-                        AppThemeMode.SYSTEM -> Icons.Default.SettingsBrightness
-                    }
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { onSelectMode(mode) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = modeIcon,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        },
-                        label = {
-                            Text(
-                                text = mode.label,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = isSelected,
-                            borderColor = MaterialTheme.colorScheme.outline,
-                            selectedBorderColor = MaterialTheme.colorScheme.primary
-                        )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Kapat",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
+
+            Text(
+                text = "Anahtarınız yalnızca bu cihazda şifreli saklanır.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            OutlinedTextField(
+                value = apiKeyInput,
+                onValueChange = onApiKeyInputChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Gemini API Anahtarı") },
+                placeholder = { Text("AIza...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                singleLine = true,
+                visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { showApiKey = !showApiKey }) {
+                        Icon(
+                            imageVector = if (showApiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (showApiKey) "Gizle" else "Göster"
+                        )
+                    }
+                },
+                shape = RoundedCornerShape(12.dp),
+                colors = profileTextFieldColors()
+            )
+
+            statusMessage?.let { msg ->
+                Text(
+                    text = msg,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Button(
+                    onClick = onSave,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Kaydet", fontWeight = FontWeight.Bold)
+                }
+
+                if (isCustomApiKeySaved || apiKeyInput.isNotBlank()) {
+                    TextButton(
+                        onClick = onClear,
+                        modifier = Modifier.height(48.dp),
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = TrendDown
+                        )
+                    ) {
+                        Text("Kaldır", fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
         }
+    }
+}
+
+private fun formatRelativeSyncTime(timestampMillis: Long): String {
+    val diffMinutes = ((System.currentTimeMillis() - timestampMillis) / 60_000L).coerceAtLeast(0L)
+    return when {
+        diffMinutes < 1L -> "az önce"
+        diffMinutes < 60L -> "$diffMinutes dk önce"
+        else -> "${diffMinutes / 60L} saat önce"
     }
 }
 

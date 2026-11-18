@@ -21,7 +21,7 @@ data class ProfileUiState(
     val isCustomApiKeySaved: Boolean = false,
     val portfolioCount: Int = 0,
     val favoritesCount: Int = 0,
-    val isSyncing: Boolean = false,
+    val lastSyncedAtMillis: Long = System.currentTimeMillis(),
     val statusMessage: String? = null,
     val emailInput: String = "",
     val passwordInput: String = "",
@@ -73,7 +73,12 @@ class ProfileViewModel @Inject constructor(
                     portfolioRepository.getPortfolio(user?.uid)
                 }
                 .collect { items ->
-                    _uiState.update { it.copy(portfolioCount = items.size) }
+                    _uiState.update {
+                        it.copy(
+                            portfolioCount = items.count { item -> item.lotSize > 0 },
+                            lastSyncedAtMillis = if (it.user != null) System.currentTimeMillis() else it.lastSyncedAtMillis
+                        )
+                    }
                 }
         }
 
@@ -156,7 +161,8 @@ class ProfileViewModel @Inject constructor(
                         user = user,
                         isAuthLoading = false,
                         passwordInput = "",
-                        authErrorMessage = null
+                        authErrorMessage = null,
+                        lastSyncedAtMillis = System.currentTimeMillis()
                     )
                 }
             }.onFailure { error ->
@@ -185,7 +191,7 @@ class ProfileViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 isCustomApiKeySaved = true,
-                statusMessage = "API anahtarı EncryptedSharedPreferences ile yerel olarak kaydedildi."
+                statusMessage = "Anahtarınız yalnızca bu cihazda şifreli saklanır."
             )
         }
     }
@@ -196,26 +202,8 @@ class ProfileViewModel @Inject constructor(
             it.copy(
                 apiKeyInput = "",
                 isCustomApiKeySaved = false,
-                statusMessage = "Özel API anahtarı temizlendi."
+                statusMessage = "Özel API anahtarı kaldırıldı."
             )
-        }
-    }
-
-    fun backupToCloud() {
-        val user = _uiState.value.user ?: return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isSyncing = true, statusMessage = null) }
-            val result = portfolioRepository.syncLocalToCloud(user.uid)
-            _uiState.update {
-                it.copy(
-                    isSyncing = false,
-                    statusMessage = if (result.isSuccess) {
-                        "Yerel portföy verileriniz buluta yedeklendi."
-                    } else {
-                        result.exceptionOrNull()?.localizedMessage ?: "Bulut yedekleme başarısız oldu."
-                    }
-                )
-            }
         }
     }
 

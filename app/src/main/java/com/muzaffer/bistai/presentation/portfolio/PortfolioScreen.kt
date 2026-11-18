@@ -1,12 +1,11 @@
 package com.muzaffer.bistai.presentation.portfolio
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,9 +13,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -25,21 +24,31 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.muzaffer.bistai.core.formatTrCurrency
+import com.muzaffer.bistai.core.formatTrLot
+import com.muzaffer.bistai.core.formatTrPercent
+import com.muzaffer.bistai.core.toCleanBistName
+import com.muzaffer.bistai.domain.model.ChartData
+import com.muzaffer.bistai.domain.model.ChartTimeRange
 import com.muzaffer.bistai.domain.model.PortfolioItem
 import com.muzaffer.bistai.domain.model.PortfolioQuickAction
 import com.muzaffer.bistai.domain.model.Stock
 import com.muzaffer.bistai.presentation.components.AiQuickActionBottomSheet
 import com.muzaffer.bistai.presentation.components.ShimmerStockCard
+import com.muzaffer.bistai.presentation.stockdetail.BezierLineChartCanvas
+import com.muzaffer.bistai.presentation.stockdetail.formatChartTimestamp
 import com.muzaffer.bistai.presentation.theme.TrendDown
 import com.muzaffer.bistai.presentation.theme.TrendUp
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,16 +57,36 @@ fun PortfolioScreen(
     viewModel: PortfolioViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var searchQuery by remember { mutableStateOf("") }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+    var showMarketsSheet by remember { mutableStateOf(false) }
 
-    val filteredStocks = remember(uiState.stocks, searchQuery) {
-        if (searchQuery.isBlank()) {
-            uiState.stocks
-        } else {
-            uiState.stocks.filter {
-                it.symbol.contains(searchQuery, ignoreCase = true) ||
-                it.name.contains(searchQuery, ignoreCase = true)
-            }
+    val ownedItems = remember(uiState.portfolioItems) {
+        uiState.portfolioItems.filter { it.lotSize > 0 }
+    }
+
+    val ownedStocks = remember(ownedItems, uiState.stocks) {
+        ownedItems.mapNotNull { item ->
+            val stock = uiState.stocks.find { it.symbol.equals(item.symbol, ignoreCase = true) }
+                ?: Stock(
+                    symbol = item.symbol,
+                    name = item.symbol.toCleanBistName(),
+                    currentPrice = item.averageCost,
+                    changePercent = 0.0
+                )
+            stock to item
+        }
+    }
+
+    val handleFavoriteToggle: (String, String) -> Unit = { symbol, name ->
+        val wasFavorite = symbol in uiState.favoriteSymbols
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        viewModel.toggleFavorite(symbol, name)
+        coroutineScope.launch {
+            snackbarHostState.showSnackbar(
+                if (wasFavorite) "$symbol favorilerden çıkarıldı" else "$symbol favorilere eklendi"
+            )
         }
     }
 
@@ -67,53 +96,34 @@ fun PortfolioScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            PortfolioTopBar()
-
-            SearchBar(
-                query = searchQuery,
-                onQueryChange = { searchQuery = it },
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp)
-            )
-
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .statusBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                items(PortfolioQuickAction.entries) { action ->
-                    val isSelected = uiState.selectedQuickAction == action && uiState.isQuickActionSheetVisible
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { viewModel.executeQuickAction(action) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Filled.AutoAwesome,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        },
-                        label = {
-                            Text(
-                                text = action.label,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            labelColor = MaterialTheme.colorScheme.onSurface,
-                            iconColor = MaterialTheme.colorScheme.primary,
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = isSelected,
-                            borderColor = MaterialTheme.colorScheme.outline,
-                            selectedBorderColor = MaterialTheme.colorScheme.primary
-                        )
+                Text(
+                    text = "Portföy",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(TrendUp)
+                    )
+                    Text(
+                        text = "CANLI",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -125,23 +135,175 @@ fun PortfolioScreen(
             ) {
                 when {
                     uiState.isLoading && uiState.stocks.isEmpty() -> LoadingState()
-                    uiState.hasError && uiState.stocks.isEmpty()  -> ErrorState(
+                    uiState.hasError && uiState.stocks.isEmpty() -> ErrorState(
                         message = uiState.errorMessage ?: "Bilinmeyen hata",
                         onRetry = { viewModel.refresh() }
                     )
                     uiState.isEmpty -> EmptyState()
-                    else -> StockList(
-                        uiState = uiState,
-                        searchQuery = searchQuery,
-                        filteredStocks = filteredStocks,
-                        onStockClick = onStockClick,
-                        onFavoriteToggle = { symbol, name ->
-                            viewModel.toggleFavorite(symbol, name)
+                    else -> LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 88.dp)
+                    ) {
+                        item {
+                            PortfolioBalanceAndChartSection(
+                                totalValue = uiState.currentTotalValue,
+                                profitLoss = uiState.totalProfitLoss,
+                                profitLossPercentage = uiState.totalProfitLossPercentage,
+                                totalInvestment = uiState.totalInvestment,
+                                hasOwnedHoldings = ownedStocks.isNotEmpty(),
+                                chartData = uiState.portfolioChartData,
+                                selectedRange = uiState.selectedChartRange,
+                                isChartLoading = uiState.isChartLoading,
+                                onRangeSelected = viewModel::selectChartRange
+                            )
                         }
-                    )
+
+                        item {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                thickness = 0.5.dp
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.executeQuickAction(PortfolioQuickAction.DIVERSIFICATION_RISK)
+                                    }
+                                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onBackground,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = "Portföyümü analiz et",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                thickness = 0.5.dp
+                            )
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Text(
+                                text = "Varlıklarım",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                            )
+                        }
+
+                        if (ownedStocks.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "Henüz sahip olduğunuz hisse yok.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
+                                )
+                            }
+                        } else {
+                            items(ownedStocks, key = { (stock, _) -> stock.symbol }) { (stock, item) ->
+                                StockRow(
+                                    stock = stock,
+                                    portfolioItem = item,
+                                    onClick = { onStockClick(stock.symbol) },
+                                    onLongClick = { handleFavoriteToggle(stock.symbol, stock.name) }
+                                )
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                    thickness = 0.5.dp,
+                                    modifier = Modifier.padding(horizontal = 20.dp)
+                                )
+                            }
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                thickness = 0.5.dp
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showMarketsSheet = true }
+                                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Hisse Ekle / Tüm Piyasalar",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "${uiState.stocks.size} hisse",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                thickness = 0.5.dp
+                            )
+                        }
+                    }
                 }
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp)
+        )
+    }
+
+    if (showMarketsSheet) {
+        MarketStocksBottomSheet(
+            stocks = uiState.stocks,
+            portfolioItems = uiState.portfolioItems,
+            onStockClick = { symbol ->
+                showMarketsSheet = false
+                onStockClick(symbol)
+            },
+            onStockLongClick = handleFavoriteToggle,
+            onDismiss = { showMarketsSheet = false }
+        )
     }
 
     if (uiState.isQuickActionSheetVisible) {
@@ -160,153 +322,140 @@ fun PortfolioScreen(
 }
 
 @Composable
-private fun SearchBar(query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier) {
-    val focusManager = LocalFocusManager.current
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = modifier,
-        placeholder = {
-            Text(
-                "Hisse ara...",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        },
-        leadingIcon = {
-            Icon(
-                Icons.Default.Search,
-                contentDescription = "Ara",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        trailingIcon = {
-            if (query.isNotBlank()) {
-                TextButton(onClick = { onQueryChange("") }) {
-                    Text("✕", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        },
-        singleLine = true,
-        shape = RoundedCornerShape(16.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            cursorColor = MaterialTheme.colorScheme.primary,
-            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-        ),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
-    )
-}
+private fun PortfolioBalanceAndChartSection(
+    totalValue: Double,
+    profitLoss: Double,
+    profitLossPercentage: Double,
+    totalInvestment: Double,
+    hasOwnedHoldings: Boolean,
+    chartData: ChartData?,
+    selectedRange: ChartTimeRange,
+    isChartLoading: Boolean,
+    onRangeSelected: (ChartTimeRange) -> Unit
+) {
+    var selectedPointIndex by remember(chartData) { mutableStateOf<Int?>(null) }
+    val activePoint = chartData?.points?.let { pts ->
+        selectedPointIndex?.takeIf { it in pts.indices }?.let { pts[it] }
+    }
 
-@Composable
-private fun PortfolioTopBar() {
-    Row(
+    val isProfit = if (hasOwnedHoldings) profitLoss >= 0.0 else (chartData?.isPositive ?: true)
+    val trendColor = if (isProfit) TrendUp else TrendDown
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column {
-            Text(
-                text = "BISTAI",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 2.sp
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(TrendUp)
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (activePoint != null) {
+                val periodDelta = activePoint.closePrice - chartData.firstPrice
+                val periodPct = if (chartData.firstPrice > 0.0) {
+                    (periodDelta / chartData.firstPrice) * 100.0
+                } else {
+                    0.0
+                }
+                val activeColor = if (periodDelta >= 0.0) TrendUp else TrendDown
+                Text(
+                    text = activePoint.closePrice.formatTrCurrency(),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "CANLI",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TrendUp,
-                    letterSpacing = 1.5.sp
+                    text = "${periodDelta.formatTrCurrency(includeSign = true)}  ${periodPct.formatTrPercent()}  •  ${formatChartTimestamp(activePoint.timestamp, chartData.range)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = activeColor,
+                    fontWeight = FontWeight.Medium
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun StockList(
-    uiState: PortfolioUiState,
-    searchQuery: String,
-    filteredStocks: List<Stock>,
-    onStockClick: (String) -> Unit,
-    onFavoriteToggle: (String, String) -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        if (searchQuery.isBlank()) {
-            item {
-                PortfolioSummaryCard(
-                    totalValue = uiState.currentTotalValue,
-                    totalInvestment = uiState.totalInvestment,
-                    profitLoss = uiState.totalProfitLoss,
-                    profitLossPercentage = uiState.totalProfitLossPercentage
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
-
-        item {
-            val label = if (searchQuery.isNotBlank()) {
-                "\"$searchQuery\" için ${filteredStocks.size} sonuç"
             } else {
-                "Tüm Piyasalar  •  ${filteredStocks.size} Hisse"
+                Text(
+                    text = totalValue.formatTrCurrency(),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "${profitLoss.formatTrCurrency(includeSign = true)}  (${profitLossPercentage.formatTrPercent()})",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (profitLoss >= 0.0) TrendUp else TrendDown,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (totalInvestment > 0.0) {
+                        Text(
+                            text = "•  Maliyet ${totalInvestment.formatTrCurrency()}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
-            )
         }
 
-        if (filteredStocks.isEmpty() && searchQuery.isNotBlank()) {
-            item {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(170.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            when {
+                isChartLoading && chartData == null -> {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                chartData != null && chartData.points.size >= 2 -> {
+                    BezierLineChartCanvas(
+                        chartData = chartData,
+                        trendColor = trendColor,
+                        selectedPointIndex = selectedPointIndex,
+                        onPointSelected = { selectedPointIndex = it },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                else -> {
+                    Text(
+                        text = "Grafik verisi bekleniyor",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            ChartTimeRange.entries.forEach { range ->
+                val isSelected = selectedRange == range
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 48.dp),
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.surfaceVariant
+                            else MaterialTheme.colorScheme.background
+                        )
+                        .clickable { onRangeSelected(range) }
+                        .padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "\"$searchQuery\" bulunamadı",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            }
-        } else {
-            items(filteredStocks, key = { it.symbol }) { stock ->
-                val portfolioItem = uiState.portfolioItems.find { it.symbol == stock.symbol }
-
-                AnimatedVisibility(visible = true, enter = fadeIn() + slideInVertically()) {
-                    StockCard(
-                        stock = stock,
-                        isFavorite = stock.symbol in uiState.favoriteSymbols,
-                        portfolioItem = portfolioItem,
-                        onClick = { onStockClick(stock.symbol) },
-                        onFavoriteClick = { onFavoriteToggle(stock.symbol, stock.name) }
+                        text = range.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.onBackground
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                     )
                 }
             }
@@ -314,173 +463,200 @@ private fun StockList(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun PortfolioSummaryCard(
-    totalValue: Double,
-    totalInvestment: Double,
-    profitLoss: Double,
-    profitLossPercentage: Double
-) {
-    val isProfit = profitLoss >= 0
-    val changeColor = if (isProfit) TrendUp else TrendDown
-    val sign = if (isProfit) "+" else ""
-
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(
-                "Cüzdan Özeti",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Column {
-                Text(
-                    "₺%.2f".format(totalValue),
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Black
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        "$sign₺%.2f".format(profitLoss),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = changeColor,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Surface(shape = RoundedCornerShape(6.dp), color = changeColor.copy(alpha = 0.14f)) {
-                        Text(
-                            "$sign%.2f%%".format(profitLossPercentage),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = changeColor,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-            }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-
-            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Column {
-                    Text(
-                        "Yatırılan",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        "₺%.2f".format(totalInvestment),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun StockCard(
+fun StockRow(
     stock: Stock,
-    isFavorite: Boolean = false,
     portfolioItem: PortfolioItem? = null,
     onClick: () -> Unit = {},
-    onFavoriteClick: () -> Unit = {}
+    onLongClick: () -> Unit = {}
 ) {
     val changeColor = if (stock.isBullish) TrendUp else TrendDown
-    val changeBg = changeColor.copy(alpha = 0.12f)
+    val displayName = remember(stock.symbol, stock.name) {
+        stock.symbol.toCleanBistName(stock.name)
+    }
 
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stock.symbol,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold
+                )
+                if (portfolioItem != null && portfolioItem.lotSize > 0.0) {
+                    Text(
+                        text = portfolioItem.lotSize.formatTrLot(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Text(
+                text = displayName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = stock.currentPrice.formatTrCurrency(),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = stock.changePercent.formatTrPercent(),
+                style = MaterialTheme.typography.bodySmall,
+                color = changeColor,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MarketStocksBottomSheet(
+    stocks: List<Stock>,
+    portfolioItems: List<PortfolioItem>,
+    onStockClick: (String) -> Unit,
+    onStockLongClick: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val focusManager = LocalFocusManager.current
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredStocks = remember(stocks, searchQuery) {
+        if (searchQuery.isBlank()) {
+            stocks
+        } else {
+            stocks.filter {
+                it.symbol.contains(searchQuery, ignoreCase = true) ||
+                it.symbol.toCleanBistName(it.name).contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 18.dp, end = 6.dp, top = 14.dp, bottom = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxHeight(0.85f)
+                .navigationBarsPadding()
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        stock.symbol,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Tüm Piyasalar",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Kapat",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
 
-                    if (portfolioItem != null && portfolioItem.lotSize > 0) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Text(
-                                "${portfolioItem.lotSize} Lot",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                placeholder = {
+                    Text(
+                        "Hisse veya şirket ara...",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = "Ara",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Temizle",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
-                }
-                Text(
-                    stock.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedContainerColor = MaterialTheme.colorScheme.background,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
+            )
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        "₺%.2f".format(stock.currentPrice),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                thickness = 0.5.dp
+            )
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                items(filteredStocks, key = { it.symbol }) { stock ->
+                    val portfolioItem = portfolioItems.find { it.symbol == stock.symbol }
+                    StockRow(
+                        stock = stock,
+                        portfolioItem = portfolioItem,
+                        onClick = { onStockClick(stock.symbol) },
+                        onLongClick = { onStockLongClick(stock.symbol, stock.name) }
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(changeBg)
-                            .padding(horizontal = 10.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            stock.formattedChangePercent,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = changeColor,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-
-                IconButton(onClick = onFavoriteClick) {
-                    AnimatedContent(targetState = isFavorite, label = "heart") { fav ->
-                        Icon(
-                            imageVector = if (fav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = if (fav) "Favoriden çıkar" else "Favoriye ekle",
-                            tint = if (fav) TrendDown else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        thickness = 0.5.dp,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
                 }
             }
         }
@@ -491,19 +667,10 @@ fun StockCard(
 private fun LoadingState() {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         userScrollEnabled = false
     ) {
-        item {
-            Box(
-                modifier = Modifier
-                    .width(160.dp)
-                    .height(14.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-            )
-        }
         items(7) { ShimmerStockCard() }
     }
 }
@@ -525,7 +692,7 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
                 Icons.Default.Warning,
                 contentDescription = null,
                 tint = TrendDown,
-                modifier = Modifier.size(52.dp)
+                modifier = Modifier.size(48.dp)
             )
             Text(
                 "Bağlantı Hatası",

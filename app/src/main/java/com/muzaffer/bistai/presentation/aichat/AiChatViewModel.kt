@@ -49,7 +49,7 @@ class AiChatViewModel @Inject constructor(
                 it.copy(
                     messages = listOf(
                         ChatMessage(
-                            text = "Gemini API anahtarı tanımlı değil. Menü sekmesinden kendi API anahtarınızı kaydedebilirsiniz.",
+                            text = "Gemini API anahtarı tanımlı değil. Profil sekmesinden kendi API anahtarınızı kaydedebilirsiniz.",
                             isFromUser = false
                         )
                     ),
@@ -64,7 +64,7 @@ class AiChatViewModel @Inject constructor(
                 it.copy(
                     messages = listOf(
                         ChatMessage(
-                            text = "Sayın Yatırımcı, ben **BISTAI**. Borsa İstanbul (BİST) ve Türkiye piyasalarına dair hisse analizleri, sektör değerlendirmeleri ve risk özetleri için hazırım.",
+                            text = "Sayın Yatırımcı, Borsa İstanbul (BİST) ve Türkiye piyasalarına dair hisse analizleri, sektör değerlendirmeleri ve risk özetleri için hazırım.",
                             isFromUser = false
                         )
                     ),

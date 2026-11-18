@@ -1,15 +1,25 @@
 package com.muzaffer.bistai.presentation.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
@@ -75,6 +85,11 @@ private fun HomeScreen(
     onStockClick: (String) -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
+    val authState by authViewModel.authState.collectAsStateWithLifecycle()
+    val profileInitial = remember(authState.user) {
+        val source = authState.user?.displayName?.takeIf { it.isNotBlank() } ?: authState.user?.email
+        source?.trim()?.firstOrNull()?.uppercaseChar()?.toString()
+    }
     val tabs = BottomNavItem.entries
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
@@ -84,6 +99,7 @@ private fun HomeScreen(
         bottomBar = {
             BistaiBottomBar(
                 selectedIndex = pagerState.currentPage,
+                profileInitial = profileInitial,
                 onTabSelected = { index ->
                     scope.launch { pagerState.animateScrollToPage(index) }
                 }
@@ -113,24 +129,55 @@ private fun HomeScreen(
 @Composable
 private fun BistaiBottomBar(
     selectedIndex: Int,
+    profileInitial: String?,
     onTabSelected: (Int) -> Unit
 ) {
     Column {
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), thickness = 0.5.dp)
         NavigationBar(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.background,
             tonalElevation = 0.dp
         ) {
             BottomNavItem.entries.forEachIndexed { index, item ->
                 val selected = selectedIndex == index
+                val itemColor = if (selected) {
+                    MaterialTheme.colorScheme.onBackground
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
                 NavigationBarItem(
                     selected = selected,
                     onClick = { onTabSelected(index) },
                     icon = {
-                        Icon(
-                            imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                            contentDescription = item.label
-                        )
+                        if (item == BottomNavItem.PROFILE && profileInitial != null) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (selected) MaterialTheme.colorScheme.onBackground
+                                        else Color.Transparent
+                                    )
+                                    .border(1.5.dp, itemColor, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = profileInitial,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (selected) {
+                                        MaterialTheme.colorScheme.background
+                                    } else {
+                                        itemColor
+                                    }
+                                )
+                            }
+                        } else {
+                            Icon(
+                                imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                                contentDescription = item.label
+                            )
+                        }
                     },
                     label = {
                         Text(
@@ -140,11 +187,11 @@ private fun BistaiBottomBar(
                         )
                     },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                        selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                        selectedIconColor = MaterialTheme.colorScheme.onBackground,
+                        selectedTextColor = MaterialTheme.colorScheme.onBackground,
                         unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        indicatorColor = MaterialTheme.colorScheme.primary
+                        indicatorColor = Color.Transparent
                     )
                 )
             }

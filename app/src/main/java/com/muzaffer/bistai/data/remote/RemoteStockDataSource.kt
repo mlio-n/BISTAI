@@ -1,5 +1,6 @@
 package com.muzaffer.bistai.data.remote
 
+import com.muzaffer.bistai.core.toCleanBistName
 import com.muzaffer.bistai.data.remote.dto.StockDto
 import com.muzaffer.bistai.domain.model.ChartData
 import com.muzaffer.bistai.domain.model.ChartPoint
@@ -100,7 +101,7 @@ class RemoteStockDataSource @Inject constructor(
 
         return StockDto(
             symbol = cleanSymbol,
-            name = meta.longName ?: meta.shortName ?: cleanSymbol,
+            name = cleanSymbol.toCleanBistName(meta.longName ?: meta.shortName),
             currentPrice = currentPrice,
             changePercent = changePercent,
             previousClose = previousClose,
