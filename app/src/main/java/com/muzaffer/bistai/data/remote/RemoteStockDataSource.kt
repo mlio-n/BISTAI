@@ -1,6 +1,9 @@
 package com.muzaffer.bistai.data.remote
 
 import com.muzaffer.bistai.data.remote.dto.StockDto
+import com.muzaffer.bistai.domain.model.ChartData
+import com.muzaffer.bistai.domain.model.ChartPoint
+import com.muzaffer.bistai.domain.model.ChartTimeRange
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -15,10 +18,6 @@ class RemoteStockDataSource @Inject constructor(
         "PGSUS.IS", "TOASO.IS", "FROTO.IS", "SAHOL.IS", "TAVHL.IS"
     )
 
-    /**
-     * BIST'teki hisselerin genel bir listesini (portföy izleme ekranı için) çeker.
-     * Bu sabit sembolleri daha sonra veritabanı kontrollü de yapabiliriz.
-     */
     suspend fun getStocks(): List<StockDto> {
         return fetchCharts(defaultBistSymbols)
     }
@@ -29,6 +28,40 @@ class RemoteStockDataSource @Inject constructor(
 
     suspend fun getBatchStocks(symbols: List<String>): List<StockDto> {
         return fetchCharts(symbols.map(::toYfSymbol))
+    }
+
+    suspend fun getStockChart(symbol: String, range: ChartTimeRange): ChartData {
+        val yfSymbol = toYfSymbol(symbol)
+        val response = api.getChartQuote(
+            symbol = yfSymbol,
+            interval = range.apiInterval,
+            range = range.apiRange
+        )
+        val result = response.chart?.result?.firstOrNull()
+            ?: throw IllegalStateException("$symbol grafik verisi bulunamadı")
+        val meta = result.meta
+        val timestamps = result.timestamp.orEmpty()
+        val closes = result.indicators?.quote?.firstOrNull()?.close.orEmpty()
+        val points = timestamps.zip(closes) { ts, close ->
+            if (close != null && close > 0.0 && !close.isNaN()) {
+                val millis = if (ts < 100_000_000_000L) ts * 1000L else ts
+                ChartPoint(timestamp = millis, closePrice = close)
+            } else {
+                null
+            }
+        }.filterNotNull()
+
+        val cleanSymbol = (meta?.symbol ?: yfSymbol).removeSuffix(".IS")
+        val currentPrice = meta?.regularMarketPrice ?: points.lastOrNull()?.closePrice ?: 0.0
+        val previousClose = meta?.chartPreviousClose ?: meta?.previousClose
+
+        return ChartData(
+            symbol = cleanSymbol,
+            range = range,
+            points = points,
+            currentPrice = currentPrice,
+            previousClose = previousClose
+        )
     }
 
     private fun toYfSymbol(symbol: String): String {
@@ -54,7 +87,6 @@ class RemoteStockDataSource @Inject constructor(
         val response = api.getChartQuote(yfSymbol)
         val meta = response.chart?.result?.firstOrNull()?.meta ?: return null
         val rawSymbol = meta.symbol ?: yfSymbol
-        // Sembolün sonundaki ".IS" ekini kaldırarak (THYAO.IS -> THYAO) UI'da temiz gösterelim
         val cleanSymbol = rawSymbol.removeSuffix(".IS")
         val currentPrice = meta.regularMarketPrice ?: 0.0
         val previousClose = meta.chartPreviousClose ?: meta.previousClose

@@ -7,13 +7,7 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface YfApiService {
-    
-    /**
-     * Yahoo Finance API endpoint'inden hisse detaylarını getirir.
-     * @param symbols Virgülle ayrılmış hisse sembolleri listesi (örn. "THYAO.IS,GARAN.IS")
-     * @param region Opsiyonel bölge parametresi (genelde "US" kullanılır)
-     * @param lang Opsiyonel dil parametresi (genelde "en" kullanılır)
-     */
+
     @GET("v7/finance/quote")
     suspend fun getQuotes(
         @Query("symbols") symbols: String,

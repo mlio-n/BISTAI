@@ -8,6 +8,9 @@ import com.muzaffer.bistai.core.Resource
 import com.muzaffer.bistai.data.remote.AiApiService
 import com.muzaffer.bistai.data.remote.SimpleChat
 import com.muzaffer.bistai.domain.model.AiPrediction
+import com.muzaffer.bistai.domain.model.ChartData
+import com.muzaffer.bistai.domain.model.ChartTimeRange
+import com.muzaffer.bistai.domain.model.PortfolioItem
 import com.muzaffer.bistai.domain.model.StockQuickAction
 import com.muzaffer.bistai.domain.repository.AnalysisRepository
 import com.muzaffer.bistai.domain.repository.AnalysisSource
@@ -34,8 +37,8 @@ data class StockDetailUiState(
     val isLoading: Boolean                    = false,
     val analysis: String?                     = null,
     val prediction: AiPrediction?             = null,
-    val analysisSource: AnalysisSource?       = null,   // 🔥 Firebase / 💾 Yerel / ✨ Taze
-    val analysisAgeMinutes: Long?             = null,   // kaç dakika önce üretildi
+    val analysisSource: AnalysisSource?       = null,
+    val analysisAgeMinutes: Long?             = null,
     val errorMessage: String?                 = null,
     val chatMessages: List<ChatMessage>       = emptyList(),
     val isChatLoading: Boolean                = false,
@@ -43,14 +46,18 @@ data class StockDetailUiState(
     val isQuickActionSheetVisible: Boolean    = false,
     val isQuickActionLoading: Boolean         = false,
     val quickActionResult: String?            = null,
-    val quickActionError: String?             = null
+    val quickActionError: String?             = null,
+    val selectedChartRange: ChartTimeRange    = ChartTimeRange.ONE_MONTH,
+    val isChartLoading: Boolean               = false,
+    val chartData: ChartData?                 = null,
+    val chartError: String?                   = null
 )
 
 @HiltViewModel
 class StockDetailViewModel @Inject constructor(
     private val aiService: AiApiService,
     private val newsRepository: NewsRepository,
-    private val analysisRepository: AnalysisRepository,   // ← V2.1: Firebase → API → Room
+    private val analysisRepository: AnalysisRepository,
     private val authRepository: AuthRepository,
     private val portfolioRepository: PortfolioRepository,
     private val stockRepository: StockRepository,
@@ -62,6 +69,7 @@ class StockDetailViewModel @Inject constructor(
 
     private var chat: SimpleChat? = null
     private var quickActionJob: Job? = null
+    private var chartJob: Job? = null
 
     companion object {
         private const val TAG = "BISTAI_VM"
@@ -74,33 +82,72 @@ class StockDetailViewModel @Inject constructor(
         initChat(symbol)
     }
 
-    /**
-     * V2.1: Firebase → Gemini API → Room cache öncelik sırası.
-     * Tüm kullanıcılar Firebase'deki ortak analizi okur; sadece ilk kullanıcı API çağrısı yapar.
-     */
+    fun selectChartRange(range: ChartTimeRange) {
+        val symbol = _uiState.value.symbol
+        if (symbol.isBlank()) return
+        _uiState.update { it.copy(selectedChartRange = range) }
+        fetchChartData(symbol, range)
+    }
+
+    fun fetchChartData(
+        symbol: String = _uiState.value.symbol,
+        range: ChartTimeRange = _uiState.value.selectedChartRange
+    ) {
+        if (symbol.isBlank()) return
+        chartJob?.cancel()
+        chartJob = viewModelScope.launch {
+            stockRepository.getStockChart(symbol, range).collect { resource ->
+                when (resource) {
+                    is Resource.Loading -> _uiState.update {
+                        it.copy(isChartLoading = true, chartError = null)
+                    }
+                    is Resource.Success -> _uiState.update {
+                        it.copy(
+                            isChartLoading = false,
+                            chartData = resource.data,
+                            chartError = null
+                        )
+                    }
+                    is Resource.Error -> _uiState.update {
+                        it.copy(
+                            isChartLoading = false,
+                            chartError = resource.message
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     fun fetchAnalysis(symbol: String) {
+        fetchChartData(symbol, _uiState.value.selectedChartRange)
         viewModelScope.launch {
             _uiState.update {
-                it.copy(isLoading = true, errorMessage = null, analysis = null,
-                    prediction = null, analysisSource = null)
+                it.copy(
+                    isLoading = true,
+                    errorMessage = null,
+                    analysis = null,
+                    prediction = null,
+                    analysisSource = null
+                )
             }
 
-            val news  = newsRepository.getNewsForAsset(symbol)
+            val news = newsRepository.getNewsForAsset(symbol)
             val macro = newsRepository.getMacroContext()
 
             analysisRepository.getAnalysis(
-                symbol       = symbol,
-                newsItems    = news,
+                symbol = symbol,
+                newsItems = news,
                 macroContext = macro
             ).onSuccess { (prediction, source, generatedAt) ->
                 val ageMinutes = (System.currentTimeMillis() - generatedAt) / 60_000L
                 Log.d(TAG, "✅ Analiz alındı: $symbol | Kaynak: $source | $ageMinutes dk önce")
                 _uiState.update {
                     it.copy(
-                        isLoading          = false,
-                        prediction         = prediction,
-                        analysis           = prediction.reasoning,
-                        analysisSource     = source,
+                        isLoading = false,
+                        prediction = prediction,
+                        analysis = prediction.reasoning,
+                        analysisSource = source,
                         analysisAgeMinutes = ageMinutes
                     )
                 }
@@ -121,11 +168,11 @@ class StockDetailViewModel @Inject constructor(
         quickActionJob?.cancel()
         _uiState.update {
             it.copy(
-                selectedQuickAction       = action,
+                selectedQuickAction = action,
                 isQuickActionSheetVisible = true,
-                isQuickActionLoading      = true,
-                quickActionResult         = null,
-                quickActionError          = null
+                isQuickActionLoading = true,
+                quickActionResult = null,
+                quickActionError = null
             )
         }
 
@@ -152,26 +199,26 @@ class StockDetailViewModel @Inject constructor(
 
             val macro = newsRepository.getMacroContext()
             analysisRepository.runStockQuickAction(
-                action        = action,
-                symbol        = symbol,
-                stock         = stock,
+                action = action,
+                symbol = symbol,
+                stock = stock,
                 portfolioItem = portfolioItem,
-                newsItems     = news,
-                macroContext  = macro,
-                prediction    = _uiState.value.prediction
+                newsItems = news,
+                macroContext = macro,
+                prediction = _uiState.value.prediction
             ).onSuccess { markdown ->
                 _uiState.update {
                     it.copy(
                         isQuickActionLoading = false,
-                        quickActionResult    = markdown,
-                        quickActionError     = null
+                        quickActionResult = markdown,
+                        quickActionError = null
                     )
                 }
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(
                         isQuickActionLoading = false,
-                        quickActionError     = mapAiError(error)
+                        quickActionError = mapAiError(error)
                     )
                 }
             }
@@ -183,7 +230,7 @@ class StockDetailViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 isQuickActionSheetVisible = false,
-                isQuickActionLoading      = false
+                isQuickActionLoading = false
             )
         }
     }
@@ -237,7 +284,7 @@ class StockDetailViewModel @Inject constructor(
     fun sendChatMessage(message: String) {
         val currentChat = chat ?: return
         if (message.isBlank()) return
-        val userMsg    = ChatMessage(text = message, isFromUser = true)
+        val userMsg = ChatMessage(text = message, isFromUser = true)
         val loadingMsg = ChatMessage(text = "...", isFromUser = false, isLoading = true, id = -1L)
         _uiState.update { it.copy(chatMessages = it.chatMessages + userMsg + loadingMsg, isChatLoading = true) }
         viewModelScope.launch {
@@ -263,14 +310,10 @@ class StockDetailViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Portföye hisse kaydeder. Misafir modunda yalnızca yerel Room veritabanına yazar;
-     * giriş yapılmışsa Firestore (users/{uid}/portfolio/{symbol}) ile de senkronize eder.
-     */
     fun addToPortfolio(lotSize: Double, averageCost: Double, onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
             val uid = authRepository.getCurrentUser()?.uid
-            val item = com.muzaffer.bistai.domain.model.PortfolioItem(
+            val item = PortfolioItem(
                 symbol = uiState.value.symbol,
                 lotSize = lotSize,
                 averageCost = averageCost

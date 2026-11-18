@@ -2,7 +2,10 @@ package com.muzaffer.bistai.presentation.stockdetail
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -22,6 +25,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -31,6 +43,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.muzaffer.bistai.domain.model.AiPrediction
+import com.muzaffer.bistai.domain.model.ChartData
+import com.muzaffer.bistai.domain.model.ChartTimeRange
 import com.muzaffer.bistai.domain.model.StockQuickAction
 import com.muzaffer.bistai.domain.model.Trend
 import com.muzaffer.bistai.domain.repository.AnalysisSource
@@ -40,6 +54,10 @@ import com.muzaffer.bistai.presentation.theme.TrendDown
 import com.muzaffer.bistai.presentation.theme.TrendUp
 import com.muzaffer.bistai.presentation.theme.WarningAmber
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.roundToInt
 
 private val QUICK_QUESTIONS = listOf(
     "Gelecek öngörünüz nedir?",
@@ -128,8 +146,26 @@ fun StockDetailScreen(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    item {
+                        SymbolBadge(
+                            symbol = symbol,
+                            onAddToPortfolioClick = { showPortfolioSheet = true }
+                        )
+                    }
+
+                    item {
+                        StockChartCard(
+                            selectedRange = uiState.selectedChartRange,
+                            isLoading = uiState.isChartLoading,
+                            chartData = uiState.chartData,
+                            errorMessage = uiState.chartError,
+                            onRangeSelected = viewModel::selectChartRange,
+                            onRetry = { viewModel.fetchChartData(symbol, uiState.selectedChartRange) }
+                        )
+                    }
+
                     item {
                         uiState.prediction?.let { pred ->
                             AiPredictionCard(
@@ -138,13 +174,6 @@ fun StockDetailScreen(
                                 ageMinutes = uiState.analysisAgeMinutes
                             )
                         }
-                    }
-
-                    item {
-                        SymbolBadge(
-                            symbol = symbol,
-                            onAddToPortfolioClick = { showPortfolioSheet = true }
-                        )
                     }
 
                     item {
@@ -283,6 +312,388 @@ fun StockDetailScreen(
             onDismiss = { viewModel.dismissQuickActionSheet() }
         )
     }
+}
+
+@Composable
+fun StockChartCard(
+    selectedRange: ChartTimeRange,
+    isLoading: Boolean,
+    chartData: ChartData?,
+    errorMessage: String?,
+    onRangeSelected: (ChartTimeRange) -> Unit,
+    onRetry: () -> Unit
+) {
+    var selectedPointIndex by remember(chartData) { mutableStateOf<Int?>(null) }
+
+    val activePoint = chartData?.points?.let { pts ->
+        selectedPointIndex?.takeIf { it in pts.indices }?.let { pts[it] }
+    }
+
+    val isPositive = chartData?.isPositive ?: true
+    val trendColor = if (isPositive) TrendUp else TrendDown
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            if (chartData != null) {
+                val displayedPrice = activePoint?.closePrice ?: chartData.lastPrice
+                val deltaFromStart = displayedPrice - chartData.firstPrice
+                val deltaPercent = if (chartData.firstPrice > 0.0) {
+                    (deltaFromStart / chartData.firstPrice) * 100.0
+                } else {
+                    0.0
+                }
+                val sign = if (deltaFromStart >= 0.0) "+" else ""
+                val badgeColor = if (deltaFromStart >= 0.0) TrendUp else TrendDown
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "₺%.2f".format(displayedPrice),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Black
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = badgeColor.copy(alpha = 0.14f)
+                            ) {
+                                Text(
+                                    text = "$sign₺%.2f ($sign%.2f%%)".format(deltaFromStart, deltaPercent),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = badgeColor,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                            Text(
+                                text = activePoint?.let {
+                                    formatChartTimestamp(it.timestamp, chartData.range)
+                                } ?: "${chartData.range.label} değişim",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Fiyat Grafiği",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            when {
+                isLoading && chartData == null -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 2.5.dp,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+
+                errorMessage != null && chartData == null -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)
+                    ) {
+                        Text(
+                            text = errorMessage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        OutlinedButton(
+                            onClick = onRetry,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Grafiği Yenile", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+
+                chartData != null && chartData.points.size >= 2 -> {
+                    BezierLineChartCanvas(
+                        chartData = chartData,
+                        trendColor = trendColor,
+                        selectedPointIndex = selectedPointIndex,
+                        onPointSelected = { selectedPointIndex = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "En Düşük: ₺%.2f".format(chartData.minPrice),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "En Yüksek: ₺%.2f".format(chartData.maxPrice),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                else -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Bu zaman aralığı için yeterli veri yok",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(ChartTimeRange.entries) { range ->
+                    val isSelected = selectedRange == range
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onRangeSelected(range) },
+                        label = {
+                            Text(
+                                text = range.label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isSelected,
+                            borderColor = MaterialTheme.colorScheme.outline,
+                            selectedBorderColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BezierLineChartCanvas(
+    chartData: ChartData,
+    trendColor: Color,
+    selectedPointIndex: Int?,
+    onPointSelected: (Int?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val gridColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val crosshairColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+    val points = chartData.points
+
+    Canvas(
+        modifier = modifier
+            .pointerInput(points) {
+                detectTapGestures { offset ->
+                    val idx = ((offset.x / size.width) * (points.size - 1))
+                        .roundToInt()
+                        .coerceIn(0, points.lastIndex)
+                    onPointSelected(if (selectedPointIndex == idx) null else idx)
+                }
+            }
+            .pointerInput(points) {
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        val idx = ((offset.x / size.width) * (points.size - 1))
+                            .roundToInt()
+                            .coerceIn(0, points.lastIndex)
+                        onPointSelected(idx)
+                    },
+                    onDragEnd = { onPointSelected(null) },
+                    onDragCancel = { onPointSelected(null) },
+                    onHorizontalDrag = { change, _ ->
+                        change.consume()
+                        val idx = ((change.position.x / size.width) * (points.size - 1))
+                            .roundToInt()
+                            .coerceIn(0, points.lastIndex)
+                        onPointSelected(idx)
+                    }
+                )
+            }
+    ) {
+        val canvasWidth = size.width
+        val canvasHeight = size.height
+        val verticalPad = 10.dp.toPx()
+        val drawableHeight = (canvasHeight - 2f * verticalPad).coerceAtLeast(1f)
+
+        val dashEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f), 0f)
+        listOf(verticalPad, canvasHeight / 2f, canvasHeight - verticalPad).forEach { gridY ->
+            drawLine(
+                color = gridColor,
+                start = Offset(0f, gridY),
+                end = Offset(canvasWidth, gridY),
+                strokeWidth = 1.dp.toPx(),
+                pathEffect = dashEffect
+            )
+        }
+
+        val minPrice = chartData.minPrice
+        val maxPrice = chartData.maxPrice
+        val span = maxPrice - minPrice
+
+        val offsets = points.mapIndexed { index, point ->
+            val x = (index.toFloat() / (points.size - 1).coerceAtLeast(1)) * canvasWidth
+            val y = if (span <= 0.0) {
+                canvasHeight / 2f
+            } else {
+                val ratio = ((point.closePrice - minPrice) / span).toFloat()
+                (canvasHeight - verticalPad) - ratio * drawableHeight
+            }
+            Offset(x, y)
+        }
+
+        val linePath = Path().apply {
+            moveTo(offsets.first().x, offsets.first().y)
+            for (i in 0 until offsets.lastIndex) {
+                val p0 = offsets[i]
+                val p1 = offsets[i + 1]
+                val controlX = (p0.x + p1.x) / 2f
+                cubicTo(controlX, p0.y, controlX, p1.y, p1.x, p1.y)
+            }
+        }
+
+        val fillPath = Path().apply {
+            addPath(linePath)
+            lineTo(offsets.last().x, canvasHeight)
+            lineTo(offsets.first().x, canvasHeight)
+            close()
+        }
+
+        drawPath(
+            path = fillPath,
+            brush = Brush.verticalGradient(
+                colors = listOf(
+                    trendColor.copy(alpha = 0.28f),
+                    trendColor.copy(alpha = 0.04f),
+                    Color.Transparent
+                ),
+                startY = 0f,
+                endY = canvasHeight
+            )
+        )
+
+        drawPath(
+            path = linePath,
+            color = trendColor,
+            style = Stroke(
+                width = 2.5.dp.toPx(),
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
+
+        val focusOffset = selectedPointIndex
+            ?.takeIf { it in offsets.indices }
+            ?.let { offsets[it] }
+
+        if (focusOffset != null) {
+            drawLine(
+                color = crosshairColor,
+                start = Offset(focusOffset.x, 0f),
+                end = Offset(focusOffset.x, canvasHeight),
+                strokeWidth = 1.dp.toPx(),
+                pathEffect = dashEffect
+            )
+            drawCircle(
+                color = trendColor.copy(alpha = 0.22f),
+                radius = 10.dp.toPx(),
+                center = focusOffset
+            )
+            drawCircle(
+                color = surfaceColor,
+                radius = 5.5.dp.toPx(),
+                center = focusOffset
+            )
+            drawCircle(
+                color = trendColor,
+                radius = 3.5.dp.toPx(),
+                center = focusOffset
+            )
+        }
+    }
+}
+
+private fun formatChartTimestamp(timestampMillis: Long, range: ChartTimeRange): String {
+    val pattern = when (range) {
+        ChartTimeRange.ONE_DAY, ChartTimeRange.ONE_WEEK -> "dd MMM HH:mm"
+        ChartTimeRange.ONE_MONTH, ChartTimeRange.THREE_MONTHS, ChartTimeRange.ONE_YEAR -> "dd MMM yyyy"
+    }
+    val formatter = SimpleDateFormat(pattern, Locale("tr", "TR"))
+    return formatter.format(Date(timestampMillis))
 }
 
 @Composable

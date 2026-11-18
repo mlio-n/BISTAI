@@ -1,7 +1,5 @@
 package com.muzaffer.bistai.data.remote.dto.yf
 
-import com.google.gson.annotations.SerializedName
-
 data class YfResponse(
     val quoteResponse: QuoteResponse
 )
@@ -32,7 +30,9 @@ data class YfChart(
 )
 
 data class YfChartResult(
-    val meta: YfChartMeta?
+    val meta: YfChartMeta?,
+    val timestamp: List<Long>? = null,
+    val indicators: YfIndicators? = null
 )
 
 data class YfChartMeta(
@@ -44,4 +44,12 @@ data class YfChartMeta(
     val chartPreviousClose: Double?,
     val previousClose: Double?,
     val regularMarketVolume: Long?
+)
+
+data class YfIndicators(
+    val quote: List<YfQuoteIndicator>?
+)
+
+data class YfQuoteIndicator(
+    val close: List<Double?>?
 )
