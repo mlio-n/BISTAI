@@ -20,7 +20,11 @@ data class ProfileUiState(
     val portfolioCount: Int = 0,
     val favoritesCount: Int = 0,
     val isSyncing: Boolean = false,
-    val statusMessage: String? = null
+    val statusMessage: String? = null,
+    val emailInput: String = "",
+    val passwordInput: String = "",
+    val isAuthLoading: Boolean = false,
+    val authErrorMessage: String? = null
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -49,7 +53,18 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             authRepository.getAuthState()
                 .flatMapLatest { user ->
-                    _uiState.update { it.copy(user = user) }
+                    _uiState.update {
+                        if (user != null) {
+                            it.copy(
+                                user = user,
+                                passwordInput = "",
+                                isAuthLoading = false,
+                                authErrorMessage = null
+                            )
+                        } else {
+                            it.copy(user = null)
+                        }
+                    }
                     portfolioRepository.getPortfolio(user?.uid)
                 }
                 .collect { items ->
@@ -71,6 +86,66 @@ class ProfileViewModel @Inject constructor(
                     it.copy(
                         apiKeyInput = key,
                         isCustomApiKeySaved = key.isNotBlank()
+                    )
+                }
+            }
+        }
+    }
+
+    fun onEmailInputChange(newValue: String) {
+        _uiState.update { it.copy(emailInput = newValue, authErrorMessage = null) }
+    }
+
+    fun onPasswordInputChange(newValue: String) {
+        _uiState.update { it.copy(passwordInput = newValue, authErrorMessage = null) }
+    }
+
+    fun signInWithEmail() {
+        executeEmailAuth(isSignUp = false)
+    }
+
+    fun signUpWithEmail() {
+        executeEmailAuth(isSignUp = true)
+    }
+
+    private fun executeEmailAuth(isSignUp: Boolean) {
+        val email = _uiState.value.emailInput.trim()
+        val password = _uiState.value.passwordInput
+
+        if (email.isBlank() || password.isBlank()) {
+            _uiState.update { it.copy(authErrorMessage = "Lütfen e-posta ve şifre alanlarını doldurun.") }
+            return
+        }
+        if (isSignUp && password.length < 6) {
+            _uiState.update { it.copy(authErrorMessage = "Şifre en az 6 karakter olmalıdır.") }
+            return
+        }
+
+        _uiState.update { it.copy(isAuthLoading = true, authErrorMessage = null) }
+
+        viewModelScope.launch {
+            val result = if (isSignUp) {
+                authRepository.signUpWithEmail(email, password)
+            } else {
+                authRepository.signInWithEmail(email, password)
+            }
+
+            result.onSuccess { user ->
+                portfolioRepository.syncLocalToCloud(user.uid)
+                _uiState.update {
+                    it.copy(
+                        user = user,
+                        isAuthLoading = false,
+                        passwordInput = "",
+                        authErrorMessage = null
+                    )
+                }
+            }.onFailure { error ->
+                val fallback = if (isSignUp) "Kayıt başarısız oldu." else "Giriş başarısız oldu."
+                _uiState.update {
+                    it.copy(
+                        isAuthLoading = false,
+                        authErrorMessage = error.localizedMessage ?: fallback
                     )
                 }
             }

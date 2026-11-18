@@ -84,13 +84,10 @@ class AuthRepositoryImpl @Inject constructor(
             }
 
             val idToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
-            val authResult = auth.signInWithCredential(
-                GoogleAuthProvider.getCredential(idToken, null)
-            ).await()
-
-            val user = authResult.user?.toDomain()
-                ?: return Result.failure(IllegalStateException("Kullanıcı oturumu açılamadı."))
-            Result.success(user)
+            authenticateWithFirebase(
+                authTask = { auth.signInWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await() },
+                failureMessage = "Kullanıcı oturumu açılamadı."
+            )
         } catch (_: GetCredentialCancellationException) {
             Result.failure(Exception("Google ile giriş iptal edildi."))
         } catch (e: GetCredentialException) {
@@ -110,11 +107,37 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun signInWithEmail(email: String, password: String): Result<User> {
+        return authenticateWithFirebase(
+            authTask = { auth.signInWithEmailAndPassword(email.trim(), password).await() },
+            failureMessage = "Kullanıcı oturumu açılamadı."
+        )
+    }
+
+    override suspend fun signUpWithEmail(email: String, password: String): Result<User> {
+        return authenticateWithFirebase(
+            authTask = { auth.createUserWithEmailAndPassword(email.trim(), password).await() },
+            failureMessage = "Kullanıcı hesabı oluşturulamadı."
+        )
+    }
+
     override suspend fun signOut() {
         runCatching {
             credentialManager.clearCredentialState(ClearCredentialStateRequest())
         }
         auth.signOut()
+    }
+
+    private suspend fun authenticateWithFirebase(
+        authTask: suspend () -> AuthResult,
+        failureMessage: String
+    ): Result<User> = try {
+        val authResult = authTask()
+        val user = authResult.user?.toDomain()
+            ?: return Result.failure(IllegalStateException(failureMessage))
+        Result.success(user)
+    } catch (e: Exception) {
+        Result.failure(e)
     }
 
     private fun FirebaseUser.toDomain() = User(
