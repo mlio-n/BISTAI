@@ -263,6 +263,8 @@ fun ProfileScreen(
                         )
                     }
                 }
+
+                AboutFooter()
             }
         } else {
             val syncAgeText = remember(uiState.lastSyncedAtMillis) {
@@ -378,6 +380,8 @@ fun ProfileScreen(
                         .padding(vertical = 12.dp),
                     textAlign = TextAlign.Center
                 )
+
+                AboutFooter()
             }
         }
     }
@@ -493,6 +497,36 @@ private fun SettingsRow(
                     modifier = Modifier.size(18.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun AboutFooter() {
+    val palette = LocalBistaiPalette.current
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outline,
+            thickness = 0.5.dp
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Hakkında",
+                style = MaterialTheme.typography.bodySmall,
+                color = palette.textSecondary
+            )
+            Text(
+                text = "BISTAI v1.0 · Muzaffer Sarıarslan",
+                style = MaterialTheme.typography.bodySmall,
+                color = palette.textSecondary
+            )
         }
     }
 }
