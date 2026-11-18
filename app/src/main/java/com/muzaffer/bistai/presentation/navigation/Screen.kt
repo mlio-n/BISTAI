@@ -10,9 +10,6 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.ui.graphics.vector.ImageVector
 
-/**
- * Uygulamadaki tüm ekran rotalarını tanımlayan sealed class.
- */
 sealed class Screen(val route: String) {
     data object Home        : Screen("home")
     data object Login       : Screen("login")
@@ -25,9 +22,6 @@ sealed class Screen(val route: String) {
     }
 }
 
-/**
- * Alt navigasyon sekmelerini temsil eden enum.
- */
 enum class BottomNavItem(
     val screen: Screen,
     val label: String,

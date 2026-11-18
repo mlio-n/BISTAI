@@ -1,5 +1,6 @@
 package com.muzaffer.bistai.presentation.navigation
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -19,7 +20,6 @@ import com.muzaffer.bistai.presentation.favorites.FavoritesScreen
 import com.muzaffer.bistai.presentation.portfolio.PortfolioScreen
 import com.muzaffer.bistai.presentation.profile.ProfileScreen
 import com.muzaffer.bistai.presentation.stockdetail.StockDetailScreen
-import com.muzaffer.bistai.presentation.theme.*
 import kotlinx.coroutines.launch
 
 @Composable
@@ -80,7 +80,7 @@ private fun HomeScreen(
     val scope = rememberCoroutineScope()
 
     Scaffold(
-        containerColor = PureBlack,
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             BistaiBottomBar(
                 selectedIndex = pagerState.currentPage,
@@ -115,37 +115,39 @@ private fun BistaiBottomBar(
     selectedIndex: Int,
     onTabSelected: (Int) -> Unit
 ) {
-    NavigationBar(
-        containerColor = NavyBlueSurface,
-        tonalElevation = 0.dp
-    ) {
-        BottomNavItem.entries.forEachIndexed { index, item ->
-            val selected = selectedIndex == index
-            NavigationBarItem(
-                selected = selected,
-                onClick = { onTabSelected(index) },
-                icon = {
-                    Icon(
-                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                        contentDescription = item.label
+    Column {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp
+        ) {
+            BottomNavItem.entries.forEachIndexed { index, item ->
+                val selected = selectedIndex == index
+                NavigationBarItem(
+                    selected = selected,
+                    onClick = { onTabSelected(index) },
+                    icon = {
+                        Icon(
+                            imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                            contentDescription = item.label
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = item.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                        selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        indicatorColor = MaterialTheme.colorScheme.primary
                     )
-                },
-                label = {
-                    Text(
-                        text = item.label,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1
-                    )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor   = if (item == BottomNavItem.AI_CHAT) GoldAccent else BullishGreen,
-                    selectedTextColor   = if (item == BottomNavItem.AI_CHAT) GoldAccent else BullishGreen,
-                    unselectedIconColor = SlateBlue,
-                    unselectedTextColor = SlateBlue,
-                    indicatorColor      = if (item == BottomNavItem.AI_CHAT)
-                        GoldAccent.copy(alpha = 0.12f) else BullishGreen.copy(alpha = 0.12f)
                 )
-            )
+            }
         }
     }
 }

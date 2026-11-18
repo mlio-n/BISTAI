@@ -27,7 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.muzaffer.bistai.presentation.theme.*
+import com.muzaffer.bistai.presentation.theme.WarningAmber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,8 +45,8 @@ fun AiQuickActionBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = NavyBlueSurface,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = SlateBlue) }
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.onSurfaceVariant) }
     ) {
         Column(
             modifier = Modifier
@@ -70,13 +70,13 @@ fun AiQuickActionBottomSheet(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(BullishGreen.copy(alpha = 0.15f)),
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.AutoAwesome,
                             contentDescription = null,
-                            tint = BullishGreen,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -84,13 +84,13 @@ fun AiQuickActionBottomSheet(
                         Text(
                             text = title,
                             style = MaterialTheme.typography.titleMedium,
-                            color = White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = subtitle,
                             style = MaterialTheme.typography.labelSmall,
-                            color = SlateBlue
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -98,12 +98,12 @@ fun AiQuickActionBottomSheet(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Kapat",
-                        tint = SlateBlue
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            HorizontalDivider(color = NavyBlueMedium)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
             Box(
                 modifier = Modifier
@@ -121,19 +121,19 @@ fun AiQuickActionBottomSheet(
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             CircularProgressIndicator(
-                                color = BullishGreen,
+                                color = MaterialTheme.colorScheme.primary,
                                 strokeWidth = 2.5.dp,
                                 modifier = Modifier.size(34.dp)
                             )
                             Text(
                                 text = "BISTAI analitik raporu hazırlıyor...",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = LightSlate
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Canlı veriler ve bağlam analiz ediliyor",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = SlateBlue
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -149,25 +149,25 @@ fun AiQuickActionBottomSheet(
                             Icon(
                                 imageVector = Icons.Default.Warning,
                                 contentDescription = null,
-                                tint = GoldAccent,
+                                tint = WarningAmber,
                                 modifier = Modifier.size(36.dp)
                             )
                             Text(
                                 text = "Analiz Tamamlanamadı",
                                 style = MaterialTheme.typography.titleSmall,
-                                color = White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = errorMessage,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = SlateBlue
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Button(
                                 onClick = onRetry,
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = BullishGreen,
-                                    contentColor = PureBlack
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
                                 ),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
@@ -204,6 +204,9 @@ fun MarkdownContent(
     modifier: Modifier = Modifier
 ) {
     val blocks = remember(markdown) { parseMarkdownBlocks(markdown) }
+    val primaryTextColor = MaterialTheme.colorScheme.onSurface
+    val boldColor = MaterialTheme.colorScheme.onBackground
+    val codeBackground = MaterialTheme.colorScheme.surfaceVariant
 
     Column(
         modifier = modifier,
@@ -218,20 +221,20 @@ fun MarkdownContent(
                         else -> MaterialTheme.typography.bodyMedium
                     }
                     Text(
-                        text = buildInlineMarkdown(block.text, White),
+                        text = buildInlineMarkdown(block.text, boldColor, boldColor, boldColor, codeBackground),
                         style = textStyle,
                         fontWeight = FontWeight.Bold,
-                        color = if (block.level <= 2) BullishGreen else White,
+                        color = boldColor,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
 
                 is MarkdownBlock.Paragraph -> {
                     Text(
-                        text = buildInlineMarkdown(block.text, LightSlate),
+                        text = buildInlineMarkdown(block.text, primaryTextColor, boldColor, boldColor, codeBackground),
                         style = MaterialTheme.typography.bodyMedium,
                         lineHeight = 21.sp,
-                        color = LightSlate
+                        color = primaryTextColor
                     )
                 }
 
@@ -244,15 +247,15 @@ fun MarkdownContent(
                             ) {
                                 Text(
                                     text = "•",
-                                    color = BullishGreen,
+                                    color = boldColor,
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    text = buildInlineMarkdown(item, LightSlate),
+                                    text = buildInlineMarkdown(item, primaryTextColor, boldColor, boldColor, codeBackground),
                                     style = MaterialTheme.typography.bodyMedium,
                                     lineHeight = 20.sp,
-                                    color = LightSlate,
+                                    color = primaryTextColor,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -269,15 +272,15 @@ fun MarkdownContent(
                             ) {
                                 Text(
                                     text = "$num.",
-                                    color = BullishGreen,
+                                    color = boldColor,
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    text = buildInlineMarkdown(item, LightSlate),
+                                    text = buildInlineMarkdown(item, primaryTextColor, boldColor, boldColor, codeBackground),
                                     style = MaterialTheme.typography.bodyMedium,
                                     lineHeight = 20.sp,
-                                    color = LightSlate,
+                                    color = primaryTextColor,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -290,7 +293,7 @@ fun MarkdownContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(GoldAccent.copy(alpha = 0.08f))
+                            .background(WarningAmber.copy(alpha = 0.08f))
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -298,13 +301,13 @@ fun MarkdownContent(
                             modifier = Modifier
                                 .width(3.dp)
                                 .height(20.dp)
-                                .background(GoldAccent)
+                                .background(WarningAmber)
                         )
                         Text(
-                            text = buildInlineMarkdown(block.text, LightSlate),
+                            text = buildInlineMarkdown(block.text, primaryTextColor, boldColor, boldColor, codeBackground),
                             style = MaterialTheme.typography.bodySmall,
                             lineHeight = 19.sp,
-                            color = LightSlate
+                            color = primaryTextColor
                         )
                     }
                 }
@@ -315,7 +318,7 @@ fun MarkdownContent(
 
                 MarkdownBlock.Divider -> {
                     HorizontalDivider(
-                        color = NavyBlueMedium,
+                        color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.padding(vertical = 2.dp)
                     )
                 }
@@ -331,25 +334,29 @@ private fun MarkdownTable(
 ) {
     val columnCount = headers.size.coerceAtLeast(1)
     val columnWidth = if (columnCount <= 2) 150.dp else 124.dp
+    val headerTextColor = MaterialTheme.colorScheme.onSurface
+    val cellTextColor = MaterialTheme.colorScheme.onSurface
+    val boldColor = MaterialTheme.colorScheme.onBackground
+    val codeBackground = MaterialTheme.colorScheme.surfaceVariant
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
             .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, NavyBlueMedium, RoundedCornerShape(12.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
     ) {
         Row(
             modifier = Modifier
-                .background(NavyBlueMedium)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .padding(vertical = 10.dp, horizontal = 10.dp)
         ) {
             headers.forEach { header ->
                 Text(
-                    text = buildInlineMarkdown(header, BullishGreen),
+                    text = buildInlineMarkdown(header, headerTextColor, boldColor, boldColor, codeBackground),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = BullishGreen,
+                    color = headerTextColor,
                     modifier = Modifier
                         .width(columnWidth)
                         .padding(end = 8.dp)
@@ -358,19 +365,21 @@ private fun MarkdownTable(
         }
 
         rows.forEachIndexed { index, row ->
-            HorizontalDivider(color = NavyBlueMedium)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             Row(
                 modifier = Modifier
-                    .background(if (index % 2 == 0) NavyBlue else NavyBlueSurface)
+                    .background(
+                        if (index % 2 == 0) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.surface
+                    )
                     .padding(vertical = 9.dp, horizontal = 10.dp)
             ) {
                 for (colIdx in 0 until columnCount) {
                     val cellText = row.getOrElse(colIdx) { "" }
                     Text(
-                        text = buildInlineMarkdown(cellText, LightSlate),
+                        text = buildInlineMarkdown(cellText, cellTextColor, boldColor, boldColor, codeBackground),
                         style = MaterialTheme.typography.bodySmall,
                         lineHeight = 18.sp,
-                        color = LightSlate,
+                        color = cellTextColor,
                         modifier = Modifier
                             .width(columnWidth)
                             .padding(end = 8.dp)
@@ -510,7 +519,13 @@ private fun splitTableRow(line: String): List<String> =
         .split("|")
         .map { it.trim() }
 
-private fun buildInlineMarkdown(text: String, baseColor: Color): AnnotatedString {
+private fun buildInlineMarkdown(
+    text: String,
+    baseColor: Color,
+    boldColor: Color,
+    codeColor: Color,
+    codeBackground: Color
+): AnnotatedString {
     return buildAnnotatedString {
         var idx = 0
         while (idx < text.length) {
@@ -518,7 +533,7 @@ private fun buildInlineMarkdown(text: String, baseColor: Color): AnnotatedString
                 text.startsWith("**", idx) -> {
                     val end = text.indexOf("**", idx + 2)
                     if (end != -1) {
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = White)) {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = boldColor)) {
                             append(text.substring(idx + 2, end))
                         }
                         idx = end + 2
@@ -530,7 +545,7 @@ private fun buildInlineMarkdown(text: String, baseColor: Color): AnnotatedString
                 text.startsWith("__", idx) -> {
                     val end = text.indexOf("__", idx + 2)
                     if (end != -1) {
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = White)) {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = boldColor)) {
                             append(text.substring(idx + 2, end))
                         }
                         idx = end + 2
@@ -545,8 +560,8 @@ private fun buildInlineMarkdown(text: String, baseColor: Color): AnnotatedString
                         withStyle(
                             SpanStyle(
                                 fontFamily = FontFamily.Monospace,
-                                color = BullishGreen,
-                                background = NavyBlueMedium
+                                color = codeColor,
+                                background = codeBackground
                             )
                         ) {
                             append(text.substring(idx + 1, end))

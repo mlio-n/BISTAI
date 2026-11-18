@@ -1,30 +1,33 @@
 package com.muzaffer.bistai.presentation.favorites
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.muzaffer.bistai.presentation.portfolio.PortfolioViewModel
 import com.muzaffer.bistai.presentation.portfolio.StockCard
-import com.muzaffer.bistai.presentation.theme.*
+import com.muzaffer.bistai.presentation.theme.TrendDown
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
     onStockClick: (String) -> Unit = {},
@@ -39,10 +42,9 @@ fun FavoritesScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(brush = Brush.verticalGradient(colors = listOf(PureBlack, NavyBlueMedium, PureBlack)))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // ── Başlık ──────────────────────────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -55,50 +57,89 @@ fun FavoritesScreen(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(BearishRed.copy(alpha = 0.15f)),
+                        .background(TrendDown.copy(alpha = 0.14f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Favorite, contentDescription = null, tint = BearishRed, modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.Default.Favorite,
+                        contentDescription = null,
+                        tint = TrendDown,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
                 Column {
-                    Text("Favorilerim", style = MaterialTheme.typography.headlineSmall, color = White, fontWeight = FontWeight.Black)
-                    Text("${favoriteStocks.size} hisse takip ediliyor", style = MaterialTheme.typography.labelMedium, color = SlateBlue)
+                    Text(
+                        "Favorilerim",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        "${favoriteStocks.size} hisse takip ediliyor",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
-            HorizontalDivider(color = NavyBlueSurface, modifier = Modifier.padding(horizontal = 16.dp))
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (favoriteStocks.isEmpty()) {
-                // Boş durum
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.padding(32.dp)
+            PullToRefreshBox(
+                isRefreshing = uiState.isLoading,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (favoriteStocks.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState()),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("❤️", fontSize = 52.sp)
-                        Text("Henüz favori eklenmedi", style = MaterialTheme.typography.titleMedium, color = White, fontWeight = FontWeight.Bold)
-                        Text(
-                            "Portföy ekranında hisse kartlarındaki kalp ikonuna basarak favorine ekleyebilirsin.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = SlateBlue
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(favoriteStocks, key = { it.symbol }) { stock ->
-                        AnimatedVisibility(visible = true, enter = fadeIn() + slideInVertically()) {
-                            StockCard(
-                                stock = stock,
-                                isFavorite = true,
-                                onClick = { onStockClick(stock.symbol) },
-                                onFavoriteClick = { viewModel.toggleFavorite(stock.symbol, stock.name) }
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.FavoriteBorder,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(48.dp)
                             )
+                            Text(
+                                "Henüz favori eklenmedi",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Portföy ekranında hisse kartlarındaki kalp ikonuna basarak favorine ekleyebilirsin.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(favoriteStocks, key = { it.symbol }) { stock ->
+                            androidx.compose.animation.AnimatedVisibility(visible = true, enter = fadeIn() + slideInVertically()) {
+                                StockCard(
+                                    stock = stock,
+                                    isFavorite = true,
+                                    onClick = { onStockClick(stock.symbol) },
+                                    onFavoriteClick = { viewModel.toggleFavorite(stock.symbol, stock.name) }
+                                )
+                            }
                         }
                     }
                 }

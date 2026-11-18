@@ -3,6 +3,8 @@ package com.muzaffer.bistai.presentation.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.muzaffer.bistai.data.local.prefs.ApiKeyManager
+import com.muzaffer.bistai.data.local.prefs.ThemePreferencesManager
+import com.muzaffer.bistai.domain.model.AppThemeMode
 import com.muzaffer.bistai.domain.model.User
 import com.muzaffer.bistai.domain.repository.AuthRepository
 import com.muzaffer.bistai.domain.repository.PortfolioRepository
@@ -24,7 +26,8 @@ data class ProfileUiState(
     val emailInput: String = "",
     val passwordInput: String = "",
     val isAuthLoading: Boolean = false,
-    val authErrorMessage: String? = null
+    val authErrorMessage: String? = null,
+    val themeMode: AppThemeMode = AppThemeMode.SYSTEM
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -33,7 +36,8 @@ class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val portfolioRepository: PortfolioRepository,
     private val watchlistRepository: WatchlistRepository,
-    private val apiKeyManager: ApiKeyManager
+    private val apiKeyManager: ApiKeyManager,
+    private val themePreferencesManager: ThemePreferencesManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -47,6 +51,7 @@ class ProfileViewModel @Inject constructor(
     init {
         observeUserAndCounts()
         observeApiKey()
+        observeThemeMode()
     }
 
     private fun observeUserAndCounts() {
@@ -89,6 +94,20 @@ class ProfileViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    private fun observeThemeMode() {
+        viewModelScope.launch {
+            themePreferencesManager.themeMode.collect { mode ->
+                _uiState.update { it.copy(themeMode = mode) }
+            }
+        }
+    }
+
+    fun setThemeMode(mode: AppThemeMode) {
+        viewModelScope.launch {
+            themePreferencesManager.setThemeMode(mode)
         }
     }
 

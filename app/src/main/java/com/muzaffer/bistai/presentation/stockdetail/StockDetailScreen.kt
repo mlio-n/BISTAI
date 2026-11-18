@@ -1,6 +1,7 @@
 package com.muzaffer.bistai.presentation.stockdetail
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,34 +11,36 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.muzaffer.bistai.domain.model.AiPrediction
 import com.muzaffer.bistai.domain.model.StockQuickAction
+import com.muzaffer.bistai.domain.model.Trend
 import com.muzaffer.bistai.domain.repository.AnalysisSource
 import com.muzaffer.bistai.presentation.components.AiQuickActionBottomSheet
 import com.muzaffer.bistai.presentation.components.ChatBubble
-import com.muzaffer.bistai.presentation.theme.*
+import com.muzaffer.bistai.presentation.theme.TrendDown
+import com.muzaffer.bistai.presentation.theme.TrendUp
+import com.muzaffer.bistai.presentation.theme.WarningAmber
 import kotlinx.coroutines.launch
 
-// Hazır soru Chips listesi
 private val QUICK_QUESTIONS = listOf(
     "Gelecek öngörünüz nedir?",
     "Dolar artarsa ne olur?",
@@ -46,6 +49,7 @@ private val QUICK_QUESTIONS = listOf(
     "Rakipleriyle karşılaştır"
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StockDetailScreen(
     symbol: String,
@@ -60,7 +64,6 @@ fun StockDetailScreen(
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
 
-    // Yeni mesaj gelince otomatik scroll
     LaunchedEffect(uiState.chatMessages.size) {
         if (uiState.chatMessages.isNotEmpty()) {
             listState.animateScrollToItem(uiState.chatMessages.size - 1)
@@ -70,12 +73,10 @@ fun StockDetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(brush = Brush.verticalGradient(colors = listOf(PureBlack, NavyBlueMedium, PureBlack)))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-
-            // ── Top Bar ────────────────────────────────────────────────────
-            TopBar(symbol = symbol, onBack = onBack, onRefresh = { viewModel.fetchAnalysis(symbol) })
+            TopBar(symbol = symbol, onBack = onBack)
 
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
@@ -101,104 +102,108 @@ fun StockDetailScreen(
                             )
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = NavyBlueSurface,
-                            labelColor = LightSlate,
-                            iconColor = BullishGreen,
-                            selectedContainerColor = BullishGreen.copy(alpha = 0.18f),
-                            selectedLabelColor = BullishGreen,
-                            selectedLeadingIconColor = BullishGreen
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            labelColor = MaterialTheme.colorScheme.onSurface,
+                            iconColor = MaterialTheme.colorScheme.primary,
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         border = FilterChipDefaults.filterChipBorder(
                             enabled = true,
                             selected = isSelected,
-                            borderColor = NavyBlueMedium,
-                            selectedBorderColor = BullishGreen.copy(alpha = 0.6f)
+                            borderColor = MaterialTheme.colorScheme.outline,
+                            selectedBorderColor = MaterialTheme.colorScheme.primary
                         )
                     )
                 }
             }
 
-            // ── Scrollable Content ─────────────────────────────────────────
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            PullToRefreshBox(
+                isRefreshing = uiState.isLoading,
+                onRefresh = { viewModel.fetchAnalysis(symbol) },
+                modifier = Modifier.weight(1f)
             ) {
-                // AI Tahmin Kartı — listenin en üstünde
-                item {
-                    uiState.prediction?.let { pred ->
-                        AiPredictionCard(
-                            prediction   = pred,
-                            source       = uiState.analysisSource,
-                            ageMinutes   = uiState.analysisAgeMinutes
-                        )
-                    }
-                }
-
-                // Sembol rozeti
-                item {
-                    SymbolBadge(
-                        symbol = symbol,
-                        onAddToPortfolioClick = { showPortfolioSheet = true }
-                    )
-                }
-
-                // Gemini tek seferlik analiz kartı
-                item {
-                    AnimatedContent(
-                        targetState = Triple(uiState.isLoading, uiState.errorMessage, uiState.analysis),
-                        transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        label = "ai_content"
-                    ) { (loading, error, analysis) ->
-                        when {
-                            loading          -> AiLoadingCard()
-                            error != null    -> AiErrorCard(message = error, onRetry = { viewModel.fetchAnalysis(symbol) })
-                            analysis != null -> AiAnalysisCard(text = analysis)
-                            else             -> AiLoadingCard()
-                        }
-                    }
-                }
-
-                // Chat bölümü başlığı
-                if (uiState.chatMessages.isNotEmpty()) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     item {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        HorizontalDivider(color = NavyBlueSurface)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(BullishGreen.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = BullishGreen, modifier = Modifier.size(14.dp))
-                            }
-                            Text(
-                                "AI Danışman Sohbeti",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = LightSlate,
-                                fontWeight = FontWeight.SemiBold
+                        uiState.prediction?.let { pred ->
+                            AiPredictionCard(
+                                prediction = pred,
+                                source = uiState.analysisSource,
+                                ageMinutes = uiState.analysisAgeMinutes
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
                     }
-                }
 
-                // Mesaj balonları
-                items(uiState.chatMessages, key = { it.id }) { msg ->
-                    ChatBubble(message = msg)
-                }
+                    item {
+                        SymbolBadge(
+                            symbol = symbol,
+                            onAddToPortfolioClick = { showPortfolioSheet = true }
+                        )
+                    }
 
-                item { Spacer(modifier = Modifier.height(8.dp)) }
+                    item {
+                        AnimatedContent(
+                            targetState = Triple(uiState.isLoading, uiState.errorMessage, uiState.analysis),
+                            transitionSpec = { fadeIn() togetherWith fadeOut() },
+                            label = "ai_content"
+                        ) { (loading, error, analysis) ->
+                            when {
+                                loading -> AiLoadingCard()
+                                error != null -> AiErrorCard(message = error, onRetry = { viewModel.fetchAnalysis(symbol) })
+                                analysis != null -> AiAnalysisCard(text = analysis)
+                                else -> AiLoadingCard()
+                            }
+                        }
+                    }
+
+                    if (uiState.chatMessages.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Filled.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                                Text(
+                                    "AI Danışman Sohbeti",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+                    }
+
+                    items(uiState.chatMessages, key = { it.id }) { msg ->
+                        ChatBubble(message = msg)
+                    }
+
+                    item { Spacer(modifier = Modifier.height(8.dp)) }
+                }
             }
 
-            // ── Hazır Sorular (Chips) ──────────────────────────────────────
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -213,21 +218,20 @@ fun StockDetailScreen(
                             Text(
                                 question,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = LightSlate
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         },
                         colors = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = NavyBlueSurface
+                            containerColor = MaterialTheme.colorScheme.surface
                         ),
                         border = SuggestionChipDefaults.suggestionChipBorder(
                             enabled = true,
-                            borderColor = NavyBlueMedium
+                            borderColor = MaterialTheme.colorScheme.outline
                         )
                     )
                 }
             }
 
-            // ── Mesaj Giriş Alanı ─────────────────────────────────────────
             ChatInputBar(
                 symbol = symbol,
                 value = inputText,
@@ -281,8 +285,6 @@ fun StockDetailScreen(
     }
 }
 
-// ─── Chat Input Bar ──────────────────────────────────────────────────────────
-
 @Composable
 private fun ChatInputBar(
     symbol: String,
@@ -291,92 +293,113 @@ private fun ChatInputBar(
     isSending: Boolean,
     onSend: () -> Unit
 ) {
-    Surface(color = NavyBlueSurface, tonalElevation = 4.dp) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.weight(1f),
-                placeholder = {
-                    Text("$symbol hakkında bir şey sor...", color = SlateBlue, style = MaterialTheme.typography.bodySmall)
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(24.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor      = BullishGreen,
-                    unfocusedBorderColor    = NavyBlueMedium,
-                    focusedContainerColor   = NavyBlueMedium,
-                    unfocusedContainerColor = NavyBlueMedium,
-                    cursorColor             = BullishGreen,
-                    focusedTextColor        = White,
-                    unfocusedTextColor      = White
-                ),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { onSend() })
-            )
-            // Gönder butonu
-            FloatingActionButton(
-                onClick = { if (!isSending) onSend() },
-                modifier = Modifier.size(48.dp),
-                containerColor = if (isSending) SlateBlue else BullishGreen,
-                contentColor = PureBlack,
-                elevation = FloatingActionButtonDefaults.elevation(0.dp)
+    Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
+        Column {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (isSending) {
-                    CircularProgressIndicator(color = White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
-                } else {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Gönder", modifier = Modifier.size(20.dp))
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.weight(1f),
+                    placeholder = {
+                        Text(
+                            "$symbol hakkında bir şey sor...",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(24.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { onSend() })
+                )
+                FloatingActionButton(
+                    onClick = { if (!isSending) onSend() },
+                    modifier = Modifier.size(48.dp),
+                    containerColor = if (isSending) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
+                    contentColor = if (isSending) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimary,
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp)
+                ) {
+                    if (isSending) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else {
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Gönder", modifier = Modifier.size(20.dp))
+                    }
                 }
             }
         }
     }
 }
 
-// ─── Top Bar ─────────────────────────────────────────────────────────────────
-
 @Composable
-private fun TopBar(symbol: String, onBack: () -> Unit, onRefresh: () -> Unit) {
+private fun TopBar(symbol: String, onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
             .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri", tint = White)
-            }
-            Spacer(modifier = Modifier.width(4.dp))
-            Column {
-                Text(symbol, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black, color = White, letterSpacing = 1.sp)
-                Text("Hisse Detayı & AI Danışman", style = MaterialTheme.typography.labelMedium, color = SlateBlue)
-            }
+        IconButton(onClick = onBack) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Geri",
+                tint = MaterialTheme.colorScheme.onBackground
+            )
         }
-        IconButton(onClick = onRefresh, colors = IconButtonDefaults.iconButtonColors(containerColor = NavyBlueSurface, contentColor = SlateBlue)) {
-            Icon(Icons.Default.Refresh, contentDescription = "Analizi Yenile")
+        Spacer(modifier = Modifier.width(4.dp))
+        Column {
+            Text(
+                symbol,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.onBackground,
+                letterSpacing = 1.sp
+            )
+            Text(
+                "Hisse Detayı & AI Danışman",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
-
-// ─── Symbol Badge ─────────────────────────────────────────────────────────────
 
 @Composable
 private fun SymbolBadge(
     symbol: String,
     onAddToPortfolioClick: () -> Unit
 ) {
-    Surface(shape = RoundedCornerShape(20.dp), color = NavyBlueSurface, modifier = Modifier.fillMaxWidth()) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -388,21 +411,35 @@ private fun SymbolBadge(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Brush.radialGradient(colors = listOf(BullishGreen.copy(alpha = 0.2f), NavyBlueMedium))),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(symbol.take(2), style = MaterialTheme.typography.titleLarge, color = BullishGreen, fontWeight = FontWeight.Black)
+                    Text(
+                        symbol.take(2),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Black
+                    )
                 }
                 Column {
-                    Text(symbol, style = MaterialTheme.typography.titleLarge, color = White, fontWeight = FontWeight.Bold)
-                    Text("BIST • Türk Lirası", style = MaterialTheme.typography.bodySmall, color = SlateBlue)
+                    Text(
+                        symbol,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "BIST • Türk Lirası",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
             FilledTonalButton(
                 onClick = onAddToPortfolioClick,
                 colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = BullishGreen.copy(alpha = 0.15f),
-                    contentColor = BullishGreen
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -412,26 +449,23 @@ private fun SymbolBadge(
     }
 }
 
-// ─── AI Prediction Card ─────────────────────────────────────────────────────
-
 @Composable
 fun AiPredictionCard(
-    prediction: com.muzaffer.bistai.domain.model.AiPrediction,
+    prediction: AiPrediction,
     source: AnalysisSource? = null,
     ageMinutes: Long? = null
 ) {
     val trend = prediction.trend
     val trendColor = when (trend) {
-        com.muzaffer.bistai.domain.model.Trend.BULLISH -> BullishGreen
-        com.muzaffer.bistai.domain.model.Trend.BEARISH -> BearishRed
-        com.muzaffer.bistai.domain.model.Trend.NEUTRAL -> GoldAccent
+        Trend.BULLISH -> TrendUp
+        Trend.BEARISH -> TrendDown
+        Trend.NEUTRAL -> WarningAmber
     }
-    // Kaynak badge bilgisi
     val (sourceEmoji, sourceLabel, sourceColor) = when (source) {
-        AnalysisSource.FIREBASE    -> Triple("🔥", "Firebase", BullishGreen)
-        AnalysisSource.LOCAL_CACHE -> Triple("💾", "Yerel önbellek", GoldAccent)
-        AnalysisSource.FRESH_API   -> Triple("✨", "Taze analiz", SlateBlue)
-        null                       -> Triple("", "", SlateBlue)
+        AnalysisSource.FIREBASE    -> Triple("🔥", "Firebase", TrendUp)
+        AnalysisSource.LOCAL_CACHE -> Triple("💾", "Yerel önbellek", WarningAmber)
+        AnalysisSource.FRESH_API   -> Triple("✨", "Taze analiz", MaterialTheme.colorScheme.onSurfaceVariant)
+        null                       -> Triple("", "", MaterialTheme.colorScheme.onSurfaceVariant)
     }
     val ageText = ageMinutes?.let {
         when {
@@ -443,28 +477,46 @@ fun AiPredictionCard(
 
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = NavyBlueSurface,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            // ── Başlık ──────────────────────────────────────────────────
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = GoldAccent, modifier = Modifier.size(18.dp))
-                    Text("BISTAI Tahmini", style = MaterialTheme.typography.titleSmall, color = White, fontWeight = FontWeight.Bold)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.AutoAwesome,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        "BISTAI Tahmini",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-                Surface(shape = RoundedCornerShape(8.dp), color = trendColor.copy(alpha = 0.15f)) {
+                Surface(shape = RoundedCornerShape(8.dp), color = trendColor.copy(alpha = 0.14f)) {
                     Text(
                         "${trend.emoji} ${trend.label}",
-                        color = trendColor, fontWeight = FontWeight.Bold,
+                        color = trendColor,
+                        fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
             }
-            // ── Kaynak Badge ─────────────────────────────────────────────
+
             if (source != null) {
-                Surface(shape = RoundedCornerShape(8.dp), color = sourceColor.copy(alpha = 0.08f)) {
+                Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                     Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -473,40 +525,62 @@ fun AiPredictionCard(
                         Text(sourceEmoji, style = MaterialTheme.typography.labelSmall)
                         Text(
                             if (ageText.isNotEmpty()) "$sourceLabel • $ageText" else sourceLabel,
-                            style = MaterialTheme.typography.labelSmall, color = sourceColor
+                            style = MaterialTheme.typography.labelSmall,
+                            color = sourceColor
                         )
                     }
                 }
             }
-            HorizontalDivider(color = NavyBlueMedium)
-            // ── Güven Skoru ─────────────────────────────────────────────
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Yapay Zeka Güven Skoru", style = MaterialTheme.typography.labelSmall, color = SlateBlue)
-                    Text("%${prediction.confidenceScore}", style = MaterialTheme.typography.labelSmall, color = trendColor, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Yapay Zeka Güven Skoru",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "%${prediction.confidenceScore}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = trendColor,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 LinearProgressIndicator(
                     progress = { prediction.confidenceScore / 100f },
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).height(6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(4.dp))
+                        .height(6.dp),
                     color = trendColor,
-                    trackColor = NavyBlueMedium
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
-            // ── Hedef Fiyat ──────────────────────────────────────────────
+
             if (prediction.targetLow > 0 || prediction.targetHigh > 0) {
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Tahmini Hedef Aralık", style = MaterialTheme.typography.labelSmall, color = SlateBlue)
+                    Text(
+                        "Tahmini Hedef Aralık",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Text(
                         "${prediction.targetLow} — ${prediction.targetHigh}",
-                        style = MaterialTheme.typography.labelMedium, color = White, fontWeight = FontWeight.SemiBold
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
-            // ── Gerekçe ──────────────────────────────────────────────────
-            Surface(shape = RoundedCornerShape(10.dp), color = trendColor.copy(alpha = 0.06f)) {
+
+            Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                 Text(
                     prediction.reasoning,
-                    style = MaterialTheme.typography.bodySmall, color = LightSlate, lineHeight = 20.sp,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = 20.sp,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                 )
             }
@@ -516,21 +590,59 @@ fun AiPredictionCard(
 
 @Composable
 fun AiAnalysisCard(text: String) {
-    Surface(shape = RoundedCornerShape(20.dp), color = NavyBlueSurface, modifier = Modifier.fillMaxWidth()) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(BullishGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = BullishGreen, modifier = Modifier.size(18.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.AutoAwesome,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
                 Column {
-                    Text("Gemini AI Analizi", style = MaterialTheme.typography.titleSmall, color = White, fontWeight = FontWeight.Bold)
-                    Text("Google Gemini 1.5 Flash", style = MaterialTheme.typography.labelSmall, color = SlateBlue)
+                    Text(
+                        "Gemini AI Analizi",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "Google Gemini Flash",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
-            HorizontalDivider(color = NavyBlueMedium)
-            Text(text, style = MaterialTheme.typography.bodyMedium, color = LightSlate, lineHeight = 22.sp)
-            Surface(shape = RoundedCornerShape(10.dp), color = GoldAccent.copy(alpha = 0.08f)) {
-                Text("⚠️  Bu analiz bilgi amaçlıdır, yatırım tavsiyesi değildir.", style = MaterialTheme.typography.labelSmall, color = GoldAccent, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            Text(
+                text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                lineHeight = 22.sp
+            )
+            Surface(shape = RoundedCornerShape(10.dp), color = WarningAmber.copy(alpha = 0.12f)) {
+                Text(
+                    "⚠️ Bu analiz bilgi amaçlıdır, yatırım tavsiyesi değildir.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = WarningAmber,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                )
             }
         }
     }
@@ -538,30 +650,79 @@ fun AiAnalysisCard(text: String) {
 
 @Composable
 fun AiLoadingCard() {
-    Surface(shape = RoundedCornerShape(20.dp), color = NavyBlueSurface, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            CircularProgressIndicator(color = BullishGreen, strokeWidth = 2.dp, modifier = Modifier.size(36.dp))
-            Text("Gemini analiz üretiyor...", style = MaterialTheme.typography.bodyMedium, color = SlateBlue)
-            Text("5-10 saniye sürebilir", style = MaterialTheme.typography.labelSmall, color = SlateBlue.copy(alpha = 0.6f))
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            CircularProgressIndicator(
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(36.dp)
+            )
+            Text(
+                "Gemini analiz üretiyor...",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                "5-10 saniye sürebilir",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
 @Composable
 fun AiErrorCard(message: String, onRetry: () -> Unit) {
-    Surface(shape = RoundedCornerShape(20.dp), color = NavyBlueSurface, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Icon(Icons.Default.Warning, contentDescription = null, tint = GoldAccent, modifier = Modifier.size(36.dp))
-            Text("Analiz Yapılamadı", style = MaterialTheme.typography.titleMedium, color = White, fontWeight = FontWeight.Bold)
-            Text(message, style = MaterialTheme.typography.bodySmall, color = SlateBlue)
-            Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = NavyBlueMedium, contentColor = LightSlate), shape = RoundedCornerShape(12.dp)) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                Icons.Default.Warning,
+                contentDescription = null,
+                tint = WarningAmber,
+                modifier = Modifier.size(36.dp)
+            )
+            Text(
+                "Analiz Yapılamadı",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
                 Text("Tekrar Dene", fontWeight = FontWeight.SemiBold)
             }
         }
     }
 }
-
-// ─── Portfolio Bottom Sheet ──────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -577,8 +738,8 @@ fun PortfolioBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = NavyBlueSurface,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = SlateBlue) }
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.onSurfaceVariant) }
     ) {
         Column(
             modifier = Modifier
@@ -590,21 +751,26 @@ fun PortfolioBottomSheet(
             Text(
                 "Portföye Ekle: $symbol",
                 style = MaterialTheme.typography.titleLarge,
-                color = White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )
 
             OutlinedTextField(
                 value = lotSize,
                 onValueChange = { lotSize = it },
-                label = { Text("Lot (Adet)", color = SlateBlue) },
+                label = { Text("Lot (Adet)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = BullishGreen,
-                    unfocusedBorderColor = NavyBlueMedium,
-                    focusedTextColor = White,
-                    unfocusedTextColor = White
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -612,14 +778,19 @@ fun PortfolioBottomSheet(
             OutlinedTextField(
                 value = averageCost,
                 onValueChange = { averageCost = it },
-                label = { Text("Alış Maliyeti (₺)", color = SlateBlue) },
+                label = { Text("Alış Maliyeti (₺)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = BullishGreen,
-                    unfocusedBorderColor = NavyBlueMedium,
-                    focusedTextColor = White,
-                    unfocusedTextColor = White
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -637,17 +808,19 @@ fun PortfolioBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = BullishGreen),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
                     "Portföye Kaydet",
-                    color = PureBlack,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(48.dp))
         }
     }

@@ -1,20 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <!-- Sistem splash (Android 12+) — lacivert arka plan + icon -->
     <style name="Theme.BISTAI" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#020C1B</item>
+        <item name="windowSplashScreenBackground">#000000</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <item name="postSplashScreenTheme">@style/Theme.BISTAI.Main</item>
     </style>
 
-    <!-- SplashActivity + MainActivity için ana tema — DARK, siyah arka plan -->
     <style name="Theme.BISTAI.Main" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#020C1B</item>
+        <item name="android:windowBackground">#000000</item>
         <item name="android:windowIsTranslucent">false</item>
-        <item name="android:statusBarColor">#020C1B</item>
-        <item name="android:navigationBarColor">#020C1B</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">#000000</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
-
 </resources>
